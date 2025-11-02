@@ -23,21 +23,26 @@ class BaseRepository(RepositoryInterface):
     # ───────────────────────────────────────────────────────────
     def find(
         self,
-        filters: Optional[Dict[str, Any]] = None,
-        projection: Optional[Dict[str, Any]] = None,
-        limit: Optional[int] = None,
+        limit: int = 10,
+        offset: int = 0,
+        sort_by: Optional[str] = None,
+        sort_direction: str = "desc",
+        query_filters: Optional[Dict[str, Any]] = None,
+        projection_fields: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         collection = self._db_service.get_collection(self._collection_name)
-        query_filters = filters or {}
-        query_projection = projection or {}
-        cursor = collection.find(query_filters, query_projection)
+        filters = query_filters or {}
+        projection = projection_fields or {}
+        cursor = collection.find(filters, projection)
+
+        if sort_by and sort_direction:
+            direction = -1 if sort_direction == "desc" else 1
+            cursor = cursor.sort(sort_by, direction)
+
+        if offset:
+            cursor = cursor.skip(offset)
 
         if limit:
             cursor = cursor.limit(limit)
 
         return list(cursor)
-
-    def create(self, data: Dict[str, Any]) -> str:
-        collection = self._db_service.get_collection(self._collection_name)
-        result = collection.insert_one(data)
-        return str(result.inserted_id)

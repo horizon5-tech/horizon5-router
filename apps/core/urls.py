@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import hello_world
+from apps.core.controllers.backtest import BacktestController
 
 router = DefaultRouter()
 
 urlpatterns = [
-    path("hello/", hello_world, name="hello-world"),
-] + router.urls
+    path("backtests/", BacktestController.as_view(), name="backtest.get"),
+    *router.urls,
+]

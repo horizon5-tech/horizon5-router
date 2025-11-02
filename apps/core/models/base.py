@@ -1,28 +1,31 @@
-from typing import Any
+from typing import Any, Dict, List, Optional
 
-from django.http import JsonResponse
-from drf_spectacular.utils import extend_schema
-from rest_framework.request import Request
-
-from apps.core.controllers.base import BaseController
-from apps.core.models.backtest import BacktestModel
+from apps.core.repositories.base import BaseRepository
 
 
-class BacktestController(BaseController):
+class BaseModel:
     # ───────────────────────────────────────────────────────────
-    # CONSTRUCTOR
+    # PROPERTIES
     # ───────────────────────────────────────────────────────────
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(**kwargs)
-        self._model = BacktestModel()
+    _repository: BaseRepository
 
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
-    @extend_schema(
-        tags=["Backtest"],
-        summary="Get backtests",
-        description="Retrieve all backtests",
-    )
-    def get(self, request: Request) -> JsonResponse:
-        return super().get(request)
+    def find(
+        self,
+        limit: int = 10,
+        offset: int = 0,
+        sort_by: Optional[str] = None,
+        sort_direction: str = "desc",
+        query_filters: Optional[Dict[str, Any]] = None,
+        projection_fields: Optional[Dict[str, Any]] = None,
+    ) -> List[Dict[str, Any]]:
+        return self._repository.find(
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_direction=sort_direction,
+            query_filters=query_filters,
+            projection_fields=projection_fields,
+        )

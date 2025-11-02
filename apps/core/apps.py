@@ -7,5 +7,5 @@ class CoreConfig(AppConfig):
     verbose_name = "Core"
 
     def ready(self) -> None:
-        import apps.core.signals
+        pass
 

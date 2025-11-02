@@ -51,6 +51,7 @@ ignore = [
     "UP006",   # list vs List, dict vs Dict
     "UP035",   # typing.List/Dict deprecated
     "UP007",   # Union[X, Y] vs X | Y
+    "F401",    # unused imports
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -61,6 +62,10 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pyright]
+reportMissingImports = false
+reportMissingModuleSource = false
 
 [tool.mypy]
 python_version = "3.11"

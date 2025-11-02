@@ -8,4 +8,3 @@ router = DefaultRouter()
 urlpatterns = [
     path("hello/", hello_world, name="hello-world"),
 ] + router.urls
-

@@ -42,7 +42,7 @@ class BaseRepository(RepositoryInterface):
         if offset:
             cursor = cursor.skip(offset)
 
-        if limit:
+        if limit != 9**100:
             cursor = cursor.limit(limit)
 
         return list(cursor)

@@ -35,3 +35,16 @@ class BaseModel:
         query_filters: Optional[Dict[str, Any]] = None,
     ) -> int:
         return self._repository.count(query_filters=query_filters)
+
+    def store(
+        self,
+        data: Dict[str, Any],
+    ) -> str:
+        return self._repository.store(data=data)
+
+    def update(
+        self,
+        query_filters: Dict[str, Any],
+        data: Dict[str, Any],
+    ) -> int:
+        return self._repository.update(query_filters=query_filters, data=data)

@@ -21,8 +21,8 @@ app.conf.update(
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    "hello_world_schedule": {
-        "task": "apps.core.tasks.hello_world",
+    "process_backtests_schedule": {
+        "task": "apps.core.tasks.process_backtests",
         "schedule": crontab(minute="*/1"),
     },
 }

@@ -9,6 +9,7 @@ from apps.core.enums.report_status import ReportStatus
 from apps.core.repositories.backtest import BacktestRepository
 from apps.core.repositories.order import OrderRepository
 from apps.core.repositories.report import ReportRepository
+from apps.core.repositories.snapshot import SnapshotRepository
 
 logger = logging.getLogger("django")
 
@@ -26,16 +27,13 @@ class ProcessBacktestTask:
         self._backtest_repository = BacktestRepository()
         self._report_repository = ReportRepository()
         self._order_repository = OrderRepository()
+        self._snapshot_repository = SnapshotRepository()
 
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
     def run(self) -> None:
-        logger.info(f"Processing task: {self._name}")
-
         pending_backtests = self._get_pending_backtests()
-
-        logger.info(f"Found {len(pending_backtests)} pending backtests")
 
         for backtest in pending_backtests:
             backtest_id = str(backtest["_id"])
@@ -45,7 +43,6 @@ class ProcessBacktestTask:
 
             if report:
                 report_id = report["_id"]
-                logger.info(f"Report: {report_id}")
 
             else:
                 report_id = self._create_report(
@@ -55,10 +52,16 @@ class ProcessBacktestTask:
                     }
                 )
 
-                logger.info(f"Report: {report_id}")
-
             orders = self._get_orders_by_backtest_id(session_id)
-            logger.info(f"Found {len(orders)} orders for backtest {backtest_id}")
+            snapshots = self._get_snapshots_by_backtest_id(session_id)
+
+            logger.info(
+                f"Backtest id: {backtest_id}, "
+                f"Session id: {session_id}, "
+                f"Report id: {report_id}, "
+                f"Orders count: {len(orders)}, "
+                f"Snapshots count: {len(snapshots)}"
+            )
 
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
@@ -88,6 +91,12 @@ class ProcessBacktestTask:
                 "backtest": True,
                 "backtest_id": session_id,
             },
+        )
+
+    def _get_snapshots_by_backtest_id(self, session_id: str) -> List[Dict[str, Any]]:
+        return self._snapshot_repository.find(
+            limit=9**100,
+            query_filters={"session_id": session_id},
         )
 
     def _create_report(self, data: Dict[str, Any]) -> str:

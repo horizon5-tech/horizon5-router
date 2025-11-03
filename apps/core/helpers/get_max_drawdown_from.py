@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_max_drawdown_from(
@@ -30,4 +31,6 @@ def get_max_drawdown_from(
     if not values or len(values) < min_values:
         return 0.0
 
-    return float(ep.max_drawdown(values))
+    values_array = np.array(values)
+
+    return float(ep.max_drawdown(values_array))

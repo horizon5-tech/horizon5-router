@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_sharpe_ratio_from_orders(
@@ -12,4 +13,6 @@ def get_sharpe_ratio_from_orders(
     if not values or len(values) < min_values:
         return 0.0
 
-    return float(ep.sharpe_ratio(values, risk_free=risk_free_rate))  # type: ignore[arg-type]
+    values_array = np.array(values)
+
+    return float(ep.sharpe_ratio(values_array, risk_free=risk_free_rate))  # type: ignore[arg-type]

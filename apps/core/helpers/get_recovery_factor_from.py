@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_recovery_factor_from(
@@ -33,11 +34,12 @@ def get_recovery_factor_from(
     if not values or len(values) < min_values:
         return 0.0
 
-    max_dd = abs(ep.max_drawdown(values))
+    values_array = np.array(values)
+    max_dd = abs(ep.max_drawdown(values_array))
 
     if max_dd == 0:
         return 0.0
 
-    total_return = (values[-1] - values[0]) / values[0] if values[0] != 0 else 0.0
+    total_return = (values_array[-1] - values_array[0]) / values_array[0] if values_array[0] != 0 else 0.0
 
     return float(total_return / max_dd)

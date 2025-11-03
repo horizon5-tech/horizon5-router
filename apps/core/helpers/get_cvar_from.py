@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 
 
-def get_expected_shortfall_from(
+def get_cvar_from(
     values: List[float],
     cutoff: float = 0.05,
 ) -> float:
@@ -33,7 +33,8 @@ def get_expected_shortfall_from(
     if not values or len(values) < min_values:
         return 0.0
 
-    returns = np.diff(values) / values[:-1]
+    values_array = np.array(values)
+    returns = np.diff(values_array) / values_array[:-1]
     var_cutoff = np.percentile(returns, cutoff * 100)
     shortfall_returns = returns[returns <= var_cutoff]
 
@@ -41,3 +42,4 @@ def get_expected_shortfall_from(
         return 0.0
 
     return float(np.mean(shortfall_returns))
+

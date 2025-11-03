@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_calmar_ratio_from(
@@ -36,9 +37,11 @@ def get_calmar_ratio_from(
     if not values or len(values) < min_values:
         return 0.0
 
+    values_array = np.array(values)
+
     return float(
         ep.calmar_ratio(
-            values,
+            values_array,
             period=period,
         )
     )

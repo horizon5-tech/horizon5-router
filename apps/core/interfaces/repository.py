@@ -33,6 +33,13 @@ class RepositoryInterface(ABC):
         pass
 
     @abstractmethod
+    def store_many(
+        self,
+        data: List[Dict[str, Any]],
+    ) -> List[str]:
+        pass
+
+    @abstractmethod
     def update(
         self,
         query_filters: Dict[str, Any],

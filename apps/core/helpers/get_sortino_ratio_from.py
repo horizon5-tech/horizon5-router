@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_sortino_ratio_from(
@@ -18,7 +19,8 @@ def get_sortino_ratio_from(
     Parameters:
         values: List of portfolio values over time (e.g., [100, 105, 98, 110])
         required_return: Minimum acceptable return threshold (default: 0.0)
-        period: Frequency of values - "daily", "weekly", "monthly", or "yearly" (default: "daily")
+        period: Frequency of values - "daily", "weekly", "monthly", or
+                "yearly" (default: "daily")
 
     Returns:
         Sortino ratio as a float (e.g., 1.07)
@@ -36,9 +38,11 @@ def get_sortino_ratio_from(
     if not values or len(values) < min_values:
         return 0.0
 
+    values_array = np.array(values)
+
     return float(
         ep.sortino_ratio(
-            values,
+            values_array,
             required_return=required_return,  # pyright: ignore[reportArgumentType]
             period=period,
         )

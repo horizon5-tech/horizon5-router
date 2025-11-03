@@ -1,6 +1,6 @@
 from .get_cagr_from import get_cagr_from
 from .get_calmar_ratio_from import get_calmar_ratio_from
-from .get_expected_shortfall_from import get_expected_shortfall_from
+from .get_cvar_from import get_cvar_from
 from .get_max_drawdown_from import get_max_drawdown_from
 from .get_profit_factor_from import get_profit_factor_from
 from .get_r2_from import get_r2_from
@@ -13,7 +13,7 @@ from .get_ulcer_index_from import get_ulcer_index_from
 __all__ = [
     "get_cagr_from",
     "get_calmar_ratio_from",
-    "get_expected_shortfall_from",
+    "get_cvar_from",
     "get_max_drawdown_from",
     "get_profit_factor_from",
     "get_r2_from",

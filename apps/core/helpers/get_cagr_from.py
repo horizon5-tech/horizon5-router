@@ -1,6 +1,7 @@
 from typing import List
 
 import empyrical as ep
+import numpy as np
 
 
 def get_cagr_from(
@@ -34,9 +35,11 @@ def get_cagr_from(
     if not values or len(values) < min_values:
         return 0.0
 
+    values_array = np.array(values)
+
     return float(
         ep.cagr(
-            values,
+            values_array,
             period=period,
         )
     )

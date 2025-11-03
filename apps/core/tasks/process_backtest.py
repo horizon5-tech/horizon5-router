@@ -7,9 +7,21 @@ from celery import shared_task
 
 from apps.core.enums.backtest_status import BacktestStatus
 from apps.core.enums.report_status import ReportStatus
+from apps.core.helpers.get_cagr_from import get_cagr_from
+from apps.core.helpers.get_calmar_ratio_from import get_calmar_ratio_from
+from apps.core.helpers.get_cvar_from import get_cvar_from
+from apps.core.helpers.get_max_drawdown_from import get_max_drawdown_from
+from apps.core.helpers.get_profit_factor_from import get_profit_factor_from
+from apps.core.helpers.get_r2_from import get_r2_from
+from apps.core.helpers.get_recovery_factor_from import get_recovery_factor_from
+from apps.core.helpers.get_sharpe_ratio_from import get_sharpe_ratio_from_orders
+from apps.core.helpers.get_sortino_ratio_from import get_sortino_ratio_from
+from apps.core.helpers.get_ulcer_index_from import get_ulcer_index_from
 from apps.core.repositories.backtest import BacktestRepository
 from apps.core.repositories.order import OrderRepository
 from apps.core.repositories.report import ReportRepository
+from apps.core.repositories.report_performance import ReportPerformanceRepository
+from apps.core.repositories.report_returns import ReportReturnsRepository
 from apps.core.repositories.snapshot import SnapshotRepository
 
 logger = logging.getLogger("django")
@@ -33,6 +45,8 @@ class ProcessBacktestTask:
     def __init__(self) -> None:
         self._backtest_repository = BacktestRepository()
         self._report_repository = ReportRepository()
+        self._report_returns_repository = ReportReturnsRepository()
+        self._report_performance_repository = ReportPerformanceRepository()
         self._order_repository = OrderRepository()
         self._snapshot_repository = SnapshotRepository()
 
@@ -51,46 +65,42 @@ class ProcessBacktestTask:
             if report:
                 report_id = report["_id"]
 
-                if report["status"] == ReportStatus.FAILED.value:
-                    logger.info(
-                        f"Ignoring backtest: {backtest_id}, "
-                        f"report status: {report['status']} "
-                        f"Because it failed before."
-                    )
+                # if report["status"] == ReportStatus.FAILED.value:
+                #     logger.info(
+                #         f"Ignoring backtest: {backtest_id}, "
+                #         f"report status: {report['status']} "
+                #         f"Because it failed before."
+                #     )
 
-                    continue
+                #     continue
 
-                if report["status"] == ReportStatus.READY.value:
-                    logger.info(
-                        f"Ignoring backtest: {backtest_id}, "
-                        f"report status: {report['status']} "
-                        f"Because it is already ready."
-                    )
+                # if report["status"] == ReportStatus.READY.value:
+                #     logger.info(
+                #         f"Ignoring backtest: {backtest_id}, "
+                #         f"report status: {report['status']} "
+                #         f"Because it is already ready."
+                #     )
 
-                    continue
+                #     continue
 
-                if report["status"] == ReportStatus.BUILDING.value:
-                    logger.info(
-                        f"Ignoring backtest: {backtest_id}, "
-                        f"report status: {report['status']} "
-                        f"Because it is already building."
-                    )
+                # if report["status"] == ReportStatus.BUILDING.value:
+                #     logger.info(
+                #         f"Ignoring backtest: {backtest_id}, "
+                #         f"report status: {report['status']} "
+                #         f"Because it is already building."
+                #     )
 
-                    continue
+                #     continue
 
             else:
-                report_id = self._create_report(
+                report_id = self._store_report(
                     {
                         "backtest_id": backtest_id,
                         "status": ReportStatus.BUILDING.value,
                     }
                 )
 
-                logger.info(report_id)
-
                 report = self._get_report_by_id(report_id)
-
-                logger.info(report)
 
                 if not report:
                     logger.error(f"Failed to create report for backtest {backtest_id}")
@@ -124,34 +134,92 @@ class ProcessBacktestTask:
             logger.info(f"Snapshots count: {len(snapshots)}")
             logger.info(f"Allocation: {allocation:,.2f}")
 
-            self._update_report(
-                report_id=report_id,
-                data={
-                    "status": ReportStatus.READY.value,
-                },
-            )
+            self._perform_report()
 
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
+    def _perform_report(self) -> None:
+        if self._report is None:
+            return
+
+        orders = self._orders
+        allocation = self._allocation
+        report_id = self._report["_id"]
+
+        (
+            returns,
+            performance,
+            cumulative_account_dates,
+        ) = self._get_cumulative_returns_from_orders(
+            orders=orders,
+            allocation=allocation,
+        )
+
+        profits = [order.get("profit", 0.0) for order in orders]
+
+        r2 = get_r2_from(performance)
+        cagr = get_cagr_from(performance)
+        calmar_ratio = get_calmar_ratio_from(performance)
+        expected_shortfall = get_cvar_from(performance, cutoff=0.05)
+        max_drawdown = get_max_drawdown_from(performance)
+        profit_factor = get_profit_factor_from(profits)
+        recovery_factor = get_recovery_factor_from(performance)
+        sharpe_ratio = get_sharpe_ratio_from_orders(performance, risk_free_rate=0.0)
+        sortino_ratio = get_sortino_ratio_from(performance)
+        ulcer_index = get_ulcer_index_from(performance)
+
+        self._store_returns(
+            report_id=str(report_id),
+            values=returns,
+            dates=cumulative_account_dates,
+        )
+
+        self._store_performance(
+            report_id=str(report_id),
+            values=performance,
+            dates=cumulative_account_dates,
+        )
+
+        self._update_report(
+            report_id=report_id,
+            data={
+                "r2": r2,
+                "cagr": cagr,
+                "calmar_ratio": calmar_ratio,
+                "expected_shortfall": expected_shortfall,
+                "max_drawdown": max_drawdown,
+                "profit_factor": profit_factor,
+                "recovery_factor": recovery_factor,
+                "sharpe_ratio": sharpe_ratio,
+                "sortino_ratio": sortino_ratio,
+                "ulcer_index": ulcer_index,
+                "status": ReportStatus.READY.value,
+            },
+        )
+
     def _get_cumulative_returns_from_orders(
         self,
         orders: List[Dict[str, Any]],
         allocation: float,
     ) -> Tuple[List[float], List[float], List[datetime]]:
-        cumulative_returns = []
-        capital_growth_percentage = []
-        dates = []
+        returns = []
+        performance = []
+        cumulative_account_dates = []
         total = 0.0
 
         for order in orders:
             total += order.get("profit", 0.0)
-            cumulative_returns.append(total)
+            returns.append(total)
             growth_pct = ((allocation + total) / allocation - 1) * 100
-            capital_growth_percentage.append(growth_pct)
-            dates.append(order.get("created_at"))
+            performance.append(growth_pct)
+            cumulative_account_dates.append(order.get("created_at"))
 
-        return cumulative_returns, capital_growth_percentage, dates
+        return (
+            returns,
+            performance,
+            cumulative_account_dates,
+        )
 
     def _get_pending_backtests(self) -> List[Dict[str, Any]]:
         return self._backtest_repository.find(
@@ -189,16 +257,56 @@ class ProcessBacktestTask:
             query_filters={"session_id": session_id},
         )
 
-    def _create_report(self, data: Dict[str, Any]) -> str:
-        return self._report_repository.store(
-            data=data,
-        )
-
     def _update_report(self, report_id: str, data: Dict[str, Any]) -> None:
         self._report_repository.update(
             query_filters={"_id": ObjectId(report_id)},
             data=data,
         )
+
+    def _store_report(self, data: Dict[str, Any]) -> str:
+        return self._report_repository.store(
+            data=data,
+        )
+
+    def _store_returns(
+        self,
+        report_id: str,
+        values: List[float],
+        dates: List[datetime],
+    ) -> List[str]:
+        documents = [
+            {
+                "report_id": report_id,
+                "value": value,
+                "date": date,
+            }
+            for value, date in zip(
+                values,
+                dates,
+                strict=True,
+            )
+        ]
+        return self._report_returns_repository.store_many(data=documents)
+
+    def _store_performance(
+        self,
+        report_id: str,
+        values: List[float],
+        dates: List[datetime],
+    ) -> List[str]:
+        documents = [
+            {
+                "report_id": report_id,
+                "value": value,
+                "date": date,
+            }
+            for value, date in zip(
+                values,
+                dates,
+                strict=True,
+            )
+        ]
+        return self._report_performance_repository.store_many(data=documents)
 
 
 @shared_task(name="apps.core.tasks.process_backtest")

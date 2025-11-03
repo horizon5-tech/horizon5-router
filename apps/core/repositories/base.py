@@ -63,6 +63,14 @@ class BaseRepository(RepositoryInterface):
         result = collection.insert_one(data)
         return str(result.inserted_id)
 
+    def store_many(
+        self,
+        data: List[Dict[str, Any]],
+    ) -> List[str]:
+        collection = self._db_service.get_collection(self._collection_name)
+        result = collection.insert_many(data)
+        return [str(inserted_id) for inserted_id in result.inserted_ids]
+
     def update(
         self,
         query_filters: Dict[str, Any],

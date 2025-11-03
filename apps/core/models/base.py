@@ -29,3 +29,9 @@ class BaseModel:
             query_filters=query_filters,
             projection_fields=projection_fields,
         )
+
+    def count(
+        self,
+        query_filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        return self._repository.count(query_filters=query_filters)

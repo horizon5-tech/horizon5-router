@@ -17,3 +17,10 @@ class RepositoryInterface(ABC):
         projection_fields: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         pass
+
+    @abstractmethod
+    def count(
+        self,
+        query_filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        pass

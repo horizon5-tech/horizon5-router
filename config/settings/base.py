@@ -13,6 +13,8 @@ DEBUG = os.getenv("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+API_KEY = os.getenv("API_KEY")
+
 INSTALLED_APPS = [
     "daphne",
     "django.contrib.admin",
@@ -76,16 +78,18 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+        "NAME": (
+            "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+        ),
     },
     {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "NAME": ("django.contrib.auth.password_validation.MinimumLengthValidator"),
     },
     {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+        "NAME": ("django.contrib.auth.password_validation.CommonPasswordValidator"),
     },
     {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+        "NAME": ("django.contrib.auth.password_validation.NumericPasswordValidator"),
     },
 ]
 
@@ -118,13 +122,29 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 100,
+    "EXCEPTION_HANDLER": "apps.core.exceptions.custom_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Horizon5 Router API",
     "DESCRIPTION": "API for Horizon5 Router",
-    "VERSION": "1.0.0",
+    "VERSION": "0.1.*",
     "SERVE_INCLUDE_SCHEMA": False,
+    "CONTACT": {
+        "name": "Pedro Carvajal",
+        "email": "hello@horizon5.tech",
+    },
+    "LICENSE": {
+        "name": "PolyForm Noncommercial 1.0.0",
+    },
+    "EXTERNAL_DOCS": {
+        "description": "GitHub Repository",
+        "url": "https://github.com/horizon5-tech",
+    },
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "filter": True,
+    },
 }
 
 CORS_ALLOW_ALL_ORIGINS = True

@@ -1,7 +1,8 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from bson import ObjectId
+from cerberus import Validator
 from django.http import JsonResponse
 from rest_framework.request import Request
 from rest_framework.views import APIView
@@ -28,6 +29,18 @@ class BaseController(APIView):
         sort_by_param = query_params.get("sort", "created_at")
         sort_direction_param = query_params.get("sort_order", "desc")
 
+        if not self._is_pagination_params_valid(
+            page_param,
+            page_size_param,
+            sort_by_param,
+            sort_direction_param,
+        ):
+            return self.response(
+                success=False,
+                message="Invalid pagination parameters",
+                status=HttpStatus.BAD_REQUEST,
+            )
+
         page = int(page_param)  # type: ignore
         page_size = int(page_size_param)  # type: ignore
         sort_by = str(sort_by_param)  # type: ignore
@@ -43,13 +56,30 @@ class BaseController(APIView):
                 sort_by=sort_by,
                 sort_direction=sort_direction,
             )
-            response["results"] = [self._serialize(doc) for doc in results]
+
         except Exception as e:
             return self.response(
                 success=False,
                 message=str(e),
                 status=HttpStatus.INTERNAL_SERVER_ERROR,
             )
+
+        try:
+            total = self._model.count()
+        except Exception as e:
+            return self.response(
+                success=False,
+                message=str(e),
+                status=HttpStatus.INTERNAL_SERVER_ERROR,
+            )
+
+        response["results"] = [self._serialize(doc) for doc in results]
+        response["pagination"] = {
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": (total + page_size - 1) // page_size,
+        }
 
         return self.response(
             success=True,
@@ -84,6 +114,46 @@ class BaseController(APIView):
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
+    def _is_pagination_params_valid(
+        self,
+        page_param: Union[str, List[str], None],
+        page_size_param: Union[str, List[str], None],
+        sort_by_param: Union[str, List[str], None],
+        sort_direction_param: Union[str, List[str], None],
+    ) -> bool:
+        validator = Validator(
+            {
+                "page_param": {
+                    "type": "integer",
+                    "coerce": int,
+                    "min": 1,
+                },
+                "page_size_param": {
+                    "type": "integer",
+                    "coerce": int,
+                    "min": 1,
+                    "max": 100,
+                },
+                "sort_by_param": {
+                    "type": "string",
+                    "minlength": 1,
+                },
+                "sort_direction_param": {
+                    "type": "string",
+                    "allowed": ["asc", "desc"],
+                },
+            }  # type: ignore
+        )
+
+        return validator.validate(  # type: ignore
+            {
+                "page_param": page_param,
+                "page_size_param": page_size_param,
+                "sort_by_param": sort_by_param,
+                "sort_direction_param": sort_direction_param,
+            }
+        )
+
     def _serialize(self, document: Dict[str, Any]) -> Dict[str, Any]:
         serialized = {}
 

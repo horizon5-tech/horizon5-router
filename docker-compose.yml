@@ -16,6 +16,7 @@ services:
       - horizon-network
     depends_on:
       - redis
+      - horizon-mongodb
     command: python manage.py runserver 0.0.0.0:8000
 
   redis:
@@ -27,6 +28,25 @@ services:
     networks:
       - horizon-network
 
+  horizon-mongodb:
+    image: mongo:7
+    container_name: horizon-mongodb
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD:-admin}
+    ports:
+      - "27018:27017"
+    volumes:
+      - horizon_mongodb_data:/data/db
+    networks:
+      - horizon-network
+
 networks:
   horizon-network:
     driver: bridge
+
+volumes:
+  horizon_mongodb_data:

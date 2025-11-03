@@ -46,3 +46,11 @@ class BaseRepository(RepositoryInterface):
             cursor = cursor.limit(limit)
 
         return list(cursor)
+
+    def count(
+        self,
+        query_filters: Optional[Dict[str, Any]] = None,
+    ) -> int:
+        collection = self._db_service.get_collection(self._collection_name)
+        filters = query_filters or {}
+        return collection.count_documents(filters)

@@ -31,6 +31,6 @@ class ReportReturnsController(BaseController):
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
     @extend_schema(**get_schema())
-    def get(self, request: Request) -> JsonResponse:
+    def get(self, request: Request, id: str) -> JsonResponse:
         return super().get(request)
 

@@ -9,10 +9,10 @@ from apps.core.schemas.responses import response_200_schema
 
 def get_schema() -> Any:
     return {
-        "tags": ["Report Performance"],
-        "summary": "Get report performance data",
+        "tags": ["Report Performances"],
+        "summary": "Get report performances data",
         "description": (
-            "Provides a list of report performance records saved on the database, "
+            "Provides a list of report performances records saved on the database, "
             "and also allows to filter the results by various parameters."
         ),
         "parameters": [
@@ -20,10 +20,10 @@ def get_schema() -> Any:
         ],
         "responses": {
             **response_200_schema(
-                "ReportPerformanceController",
+                "ReportPerformancesController",
                 {
                     "data": inline_serializer(
-                        name="ReportPerformance",
+                        name="ReportPerformances",
                         fields={
                             "id": serializers.CharField(),
                             "report_id": serializers.CharField(),

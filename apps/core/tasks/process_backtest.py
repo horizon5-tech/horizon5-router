@@ -20,7 +20,7 @@ from apps.core.helpers.get_ulcer_index_from import get_ulcer_index_from
 from apps.core.repositories.backtest import BacktestRepository
 from apps.core.repositories.order import OrderRepository
 from apps.core.repositories.report import ReportRepository
-from apps.core.repositories.report_performance import ReportPerformanceRepository
+from apps.core.repositories.report_performances import ReportPerformancesRepository
 from apps.core.repositories.report_returns import ReportReturnsRepository
 from apps.core.repositories.snapshot import SnapshotRepository
 
@@ -46,7 +46,7 @@ class ProcessBacktestTask:
         self._backtest_repository = BacktestRepository()
         self._report_repository = ReportRepository()
         self._report_returns_repository = ReportReturnsRepository()
-        self._report_performance_repository = ReportPerformanceRepository()
+        self._report_performances_repository = ReportPerformancesRepository()
         self._order_repository = OrderRepository()
         self._snapshot_repository = SnapshotRepository()
 
@@ -308,7 +308,7 @@ class ProcessBacktestTask:
                 strict=True,
             )
         ]
-        return self._report_performance_repository.store_many(data=documents)
+        return self._report_performances_repository.store_many(data=documents)
 
 
 @shared_task(name="apps.core.tasks.process_backtest")

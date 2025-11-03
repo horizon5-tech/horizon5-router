@@ -7,12 +7,12 @@ from rest_framework.request import Request
 
 from apps.core.authentication import APIKeyAuthentication
 from apps.core.controllers.base import BaseController
-from apps.core.models.report_performance import ReportPerformanceModel
+from apps.core.models.report_performances import ReportPerformancesModel
 
 from .schemas.get import get_schema
 
 
-class ReportPerformanceController(BaseController):
+class ReportPerformancesController(BaseController):
     # ───────────────────────────────────────────────────────────
     # PROPERTIES
     # ───────────────────────────────────────────────────────────
@@ -25,11 +25,11 @@ class ReportPerformanceController(BaseController):
     # ───────────────────────────────────────────────────────────
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._model = ReportPerformanceModel()
+        self._model = ReportPerformancesModel()
 
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
     @extend_schema(**get_schema())
-    def get(self, request: Request) -> JsonResponse:
+    def get(self, request: Request, id: str) -> JsonResponse:
         return super().get(request)

@@ -150,13 +150,12 @@ class ProcessBacktestTask:
         (
             returns,
             performance,
+            profits,
             cumulative_account_dates,
         ) = self._get_cumulative_returns_from_orders(
             orders=orders,
             allocation=allocation,
         )
-
-        profits = [order.get("profit", 0.0) for order in orders]
 
         r2 = get_r2_from(performance)
         cagr = get_cagr_from(performance)
@@ -202,9 +201,10 @@ class ProcessBacktestTask:
         self,
         orders: List[Dict[str, Any]],
         allocation: float,
-    ) -> Tuple[List[float], List[float], List[datetime]]:
+    ) -> Tuple[List[float], List[float], List[float], List[datetime]]:
         returns = []
         performance = []
+        profits = []
         cumulative_account_dates = []
         total = 0.0
 
@@ -213,11 +213,13 @@ class ProcessBacktestTask:
             returns.append(total)
             growth_pct = ((allocation + total) / allocation - 1) * 100
             performance.append(growth_pct)
+            profits.append(order.get("profit", 0.0))
             cumulative_account_dates.append(order.get("created_at"))
 
         return (
             returns,
             performance,
+            profits,
             cumulative_account_dates,
         )
 

@@ -9,3 +9,6 @@ run-dev:
 
 run-production:
 	docker compose up
+
+test-e2e:
+	docker compose exec django python manage.py test tests.e2e

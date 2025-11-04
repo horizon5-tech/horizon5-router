@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv pip install --system --no-cache -r pyproject.toml
+RUN uv pip install --system -e .
 
 COPY . .
 

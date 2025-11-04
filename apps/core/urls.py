@@ -48,8 +48,13 @@ urlpatterns = [
     ),
     path(
         "snapshots/",
-        SnapshotController.as_view(),
+        SnapshotController.as_view(http_method_names=["get"]),
         name="snapshot.get",
+    ),
+    path(
+        "snapshot/",
+        SnapshotController.as_view(http_method_names=["post"]),
+        name="snapshot.post",
     ),
     *router.urls,
 ]

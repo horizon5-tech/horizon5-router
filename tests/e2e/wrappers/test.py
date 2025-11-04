@@ -30,9 +30,9 @@ class TestWrapper(unittest.TestCase):
         self,
         method: str,
         url: str,
-        query: Optional[Dict[str, Any]],
-        body: Optional[Dict[str, Any]],
-        headers: Optional[Dict[str, str]],
+        query: Optional[Dict[str, Any]] = {},
+        body: Optional[Dict[str, Any]] = {},
+        headers: Optional[Dict[str, str]] = {},
     ) -> Any:
         if query is None:
             query = {}

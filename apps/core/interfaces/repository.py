@@ -46,3 +46,10 @@ class RepositoryInterface(ABC):
         data: Dict[str, Any],
     ) -> int:
         pass
+
+    @abstractmethod
+    def delete(
+        self,
+        query_filters: Dict[str, Any],
+    ) -> int:
+        pass

@@ -67,3 +67,9 @@ class BaseModel:
             query_filters=query_filters,
             data=data,
         )
+
+    def delete(
+        self,
+        query_filters: Dict[str, Any],
+    ) -> int:
+        return self._repository.delete(query_filters=query_filters)

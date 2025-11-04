@@ -23,7 +23,7 @@ urlpatterns = [
     ),
     path(
         "backtest/<str:id>/",
-        BacktestController.as_view(http_method_names=["put", "patch"]),
+        BacktestController.as_view(http_method_names=["put", "patch", "delete"]),
         name="backtest.update",
     ),
     path(

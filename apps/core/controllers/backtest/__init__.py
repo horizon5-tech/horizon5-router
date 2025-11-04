@@ -16,6 +16,7 @@ from apps.core.enums.http_status import HttpStatus
 from apps.core.models.backtest import BacktestModel
 from apps.core.tasks import process_backtest
 
+from .schemas.delete import delete_schema
 from .schemas.get import get_schema
 from .schemas.post import post_schema
 from .schemas.put import update_schema
@@ -91,7 +92,7 @@ class BacktestController(BaseController):
             success=True,
             message="Backtest created successfully",
             data={"_id": backtest_id},
-            status=HttpStatus.CREATED,
+            status=HttpStatus.OK,
         )
 
     @extend_schema(**update_schema())
@@ -174,6 +175,55 @@ class BacktestController(BaseController):
             success=True,
             message="Backtest updated successfully",
             data={},
+            status=HttpStatus.OK,
+        )
+
+    @extend_schema(**delete_schema())
+    def delete(self, request: Request, id: str) -> JsonResponse:
+        logger = logging.getLogger("django")
+        backtest = None
+
+        try:
+            results = self._model.find(
+                query_filters={
+                    "_id": ObjectId(id),
+                }
+            )
+            backtest = results[0] if results else None
+        except Exception as e:
+            logger.error(f"Failed to find backtest: {e}")
+
+            return self.response(
+                success=False,
+                message="Failed to find backtest",
+                status=HttpStatus.INTERNAL_SERVER_ERROR,
+            )
+
+        if not backtest:
+            return self.response(
+                success=False,
+                message="Backtest not found",
+                status=HttpStatus.NOT_FOUND,
+            )
+
+        try:
+            self._model.delete(
+                query_filters={
+                    "_id": ObjectId(id),
+                }
+            )
+        except Exception as e:
+            logger.error(f"Failed to delete backtest: {e}")
+
+            return self.response(
+                success=False,
+                message="Failed to delete backtest",
+                status=HttpStatus.INTERNAL_SERVER_ERROR,
+            )
+
+        return self.response(
+            success=True,
+            message="Backtest deleted successfully",
             status=HttpStatus.OK,
         )
 

@@ -95,7 +95,7 @@ class SnapshotController(BaseController):
             success=True,
             message="Snapshot created successfully",
             data={"_id": snapshot_id},
-            status=HttpStatus.CREATED,
+            status=HttpStatus.OK,
         )
 
     # ───────────────────────────────────────────────────────────

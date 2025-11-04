@@ -16,11 +16,12 @@ from apps.core.helpers.get_recovery_factor_from import get_recovery_factor_from
 from apps.core.helpers.get_sharpe_ratio_from import get_sharpe_ratio_from_orders
 from apps.core.helpers.get_sortino_ratio_from import get_sortino_ratio_from
 from apps.core.helpers.get_ulcer_index_from import get_ulcer_index_from
-from apps.core.repositories.order import OrderRepository
-from apps.core.repositories.report import ReportRepository
-from apps.core.repositories.report_performances import ReportPerformancesRepository
-from apps.core.repositories.report_returns import ReportReturnsRepository
-from apps.core.repositories.snapshot import SnapshotRepository
+from apps.core.models.backtest import BacktestModel
+from apps.core.models.order import OrderModel
+from apps.core.models.report import ReportModel
+from apps.core.models.report_performances import ReportPerformancesModel
+from apps.core.models.report_returns import ReportReturnsModel
+from apps.core.models.snapshot import SnapshotModel
 
 logger = logging.getLogger("django")
 
@@ -35,18 +36,22 @@ class ProcessBacktestTask:
     # CONSTRUCTOR
     # ───────────────────────────────────────────────────────────
     def __init__(self) -> None:
-        self._report_repository = ReportRepository()
-        self._report_returns_repository = ReportReturnsRepository()
-        self._report_performances_repository = ReportPerformancesRepository()
-        self._order_repository = OrderRepository()
-        self._snapshot_repository = SnapshotRepository()
+        self._report_model = ReportModel()
+        self._report_returns_model = ReportReturnsModel()
+        self._report_performances_model = ReportPerformancesModel()
+        self._order_model = OrderModel()
+        self._snapshot_model = SnapshotModel()
 
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
     def run(self, backtest_id: Optional[str] = None) -> None:
-        if not backtest_id:
-            logger.error("Backtest id is required")
+        backtest = self._get_backtest_by_id(
+            backtest_id,  # type: ignore
+        )
+
+        if not backtest_id or not backtest:
+            logger.error(f"Failed to find backtest by id: {backtest_id}")
             return
 
         report = self._get_report_by_backtest_id(backtest_id)
@@ -152,6 +157,13 @@ class ProcessBacktestTask:
             },
         )
 
+    def _get_backtest_by_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
+        results = BacktestModel().find(
+            query_filters={"_id": ObjectId(backtest_id)},
+        )
+
+        return results[0] if results else None
+
     def _get_cumulative_returns_from_orders(
         self,
         orders: List[Dict[str, Any]],
@@ -179,14 +191,14 @@ class ProcessBacktestTask:
         )
 
     def _get_report_by_backtest_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
-        report = self._report_repository.find(
+        report = self._report_model.find(
             query_filters={"backtest_id": backtest_id},
         )
 
         return report[0] if report else None
 
     def _get_orders_by_backtest_id(self, backtest_id: str) -> List[Dict[str, Any]]:
-        return self._order_repository.find(
+        return self._order_model.find(
             limit=9**100,
             query_filters={
                 "backtest": True,
@@ -195,13 +207,13 @@ class ProcessBacktestTask:
         )
 
     def _get_snapshots_by_backtest_id(self, backtest_id: str) -> List[Dict[str, Any]]:
-        return self._snapshot_repository.find(
+        return self._snapshot_model.find(
             limit=9**100,
             query_filters={"backtest_id": backtest_id},
         )
 
     def _update_report(self, report_id: str, data: Dict[str, Any]) -> None:
-        self._report_repository.update(
+        self._report_model.update(
             query_filters={"_id": ObjectId(report_id)},
             data=data,
         )
@@ -224,7 +236,7 @@ class ProcessBacktestTask:
                 strict=True,
             )
         ]
-        return self._report_returns_repository.store_many(data=documents)
+        return self._report_returns_model.store_many(data=documents)
 
     def _store_performance(
         self,
@@ -244,7 +256,7 @@ class ProcessBacktestTask:
                 strict=True,
             )
         ]
-        return self._report_performances_repository.store_many(data=documents)
+        return self._report_performances_model.store_many(data=documents)
 
 
 @shared_task(name="apps.core.tasks.process_backtest")

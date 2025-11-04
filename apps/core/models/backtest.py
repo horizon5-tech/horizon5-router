@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 from apps.core.enums.report_status import ReportStatus
 from apps.core.models.base import BaseModel
-from apps.core.models.report import ReportModel
 from apps.core.repositories.backtest import BacktestRepository
+from apps.core.repositories.report import ReportRepository
 
 
 class BacktestModel(BaseModel):
@@ -15,6 +15,7 @@ class BacktestModel(BaseModel):
         super().__init__()
         self._logger = logging.getLogger("django")
         self._repository = BacktestRepository()
+        self._report_repository = ReportRepository()
 
     def store(self, data: Dict[str, Any]) -> str:
         inserted_id = super().store(
@@ -22,7 +23,7 @@ class BacktestModel(BaseModel):
         )
 
         if inserted_id:
-            ReportModel().store(
+            self._report_repository.store(
                 data={
                     "backtest_id": inserted_id,
                     "status": ReportStatus.PENDING.value,
@@ -41,7 +42,7 @@ class BacktestModel(BaseModel):
                 f"Deleting report for backtest ID: {query_filters['_id']}"
             )
 
-            ReportModel().delete(
+            self._report_repository.delete(
                 query_filters={
                     "backtest_id": query_filters["_id"],
                 }

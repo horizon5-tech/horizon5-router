@@ -46,6 +46,14 @@ class BaseModel:
             data=data,
         )
 
+    def store_many(
+        self,
+        data: List[Dict[str, Any]],
+    ) -> List[str]:
+        return self._repository.store_many(
+            data=data,
+        )
+
     def update(
         self,
         query_filters: Dict[str, Any],

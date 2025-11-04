@@ -9,9 +9,15 @@ backtests: List[str] = []
 
 
 class TestBacktest(TestWrapper):
+    # ───────────────────────────────────────────────────────────
+    # CONSTRUCTOR
+    # ───────────────────────────────────────────────────────────
     def setUp(self) -> None:
         super().setUp()
 
+    # ───────────────────────────────────────────────────────────
+    # PUBLIC METHODS
+    # ───────────────────────────────────────────────────────────
     def test_01_create_backtest(self) -> None:
         response = self.execute(
             "POST",

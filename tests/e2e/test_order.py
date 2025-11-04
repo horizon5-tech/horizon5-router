@@ -9,9 +9,15 @@ orders: List[str] = []
 
 
 class TestOrder(TestWrapper):
+    # ───────────────────────────────────────────────────────────
+    # CONSTRUCTOR
+    # ───────────────────────────────────────────────────────────
     def setUp(self) -> None:
         super().setUp()
 
+    # ───────────────────────────────────────────────────────────
+    # PUBLIC METHODS
+    # ───────────────────────────────────────────────────────────
     def test_01_create_order(self) -> None:
         created_at = datetime.now(UTC)
         updated_at = datetime.now(UTC)

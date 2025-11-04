@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional
 
+from apps.core.enums.report_status import ReportStatus
 from apps.core.repositories.base import BaseRepository
+from apps.core.repositories.report import ReportRepository
 
 
 class BaseModel:
@@ -40,7 +42,17 @@ class BaseModel:
         self,
         data: Dict[str, Any],
     ) -> str:
-        return self._repository.store(data=data)
+        inserted_id = self._repository.store(data=data)
+
+        if inserted_id:
+            ReportRepository().store(
+                data={
+                    "backtest_id": inserted_id,
+                    "status": ReportStatus.PENDING.value,
+                }
+            )
+
+        return inserted_id
 
     def update(
         self,

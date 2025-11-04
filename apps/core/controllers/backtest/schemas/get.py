@@ -25,9 +25,7 @@ def get_schema() -> Any:
                     "data": inline_serializer(
                         name="Backtests",
                         fields={
-                            "id": serializers.CharField(),
-                            "created_at": serializers.DateTimeField(),
-                            "updated_at": serializers.DateTimeField(),
+                            "success": serializers.BooleanField(),
                         },
                     ),
                 },

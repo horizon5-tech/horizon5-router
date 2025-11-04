@@ -13,8 +13,18 @@ router = DefaultRouter()
 urlpatterns = [
     path(
         "backtests/",
-        BacktestController.as_view(),
+        BacktestController.as_view(http_method_names=["get"]),
         name="backtest.get",
+    ),
+    path(
+        "backtest/",
+        BacktestController.as_view(http_method_names=["post"]),
+        name="backtest.post",
+    ),
+    path(
+        "backtest/<str:id>/",
+        BacktestController.as_view(http_method_names=["put", "patch"]),
+        name="backtest.update",
     ),
     path(
         "orders/",

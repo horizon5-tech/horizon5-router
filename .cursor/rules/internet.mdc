@@ -1,0 +1,7 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+Whenever the user says "research" or in Spanish "investiga" anything related to code, it is important to research that implementation using various sources from the internet to gain more context and clarity on how to do it effectively. To conduct an effective investigation, you must always ensure you know which versions of the libraries or frameworks are being used—such as knowing the specific Django or Celery version if the problem or implementation is related to those technologies, and similarly for any other dependencies. You should consult at least five different sources to better understand the best approach, taking into account the specific versions in use.

@@ -32,12 +32,6 @@ class ProcessBacktestTask:
     # PROPERTIES
     # ───────────────────────────────────────────────────────────
     _name: str = "process_backtest"
-    _backtest: Dict[str, Any]
-    _report: Optional[Dict[str, Any]]
-    _orders: List[Dict[str, Any]]
-    _snapshots: List[Dict[str, Any]]
-
-    _allocation: float
 
     # ───────────────────────────────────────────────────────────
     # CONSTRUCTOR
@@ -53,99 +47,55 @@ class ProcessBacktestTask:
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
-    def run(self) -> None:
-        pending_backtests = self._get_pending_backtests()
+    def run(self, backtest_id: Optional[str] = None) -> None:
+        if not backtest_id:
+            logger.error("Backtest id is required")
+            return
 
-        for backtest in pending_backtests:
-            backtest_id = str(backtest["_id"])
-            session_id = backtest["session_id"]
-            report_id = None
-            report = self._get_report_by_backtest_id(backtest_id)
+        report = self._get_report_by_backtest_id(backtest_id)
+        orders = self._get_orders_by_backtest_id(backtest_id)
+        snapshots = self._get_snapshots_by_backtest_id(backtest_id)
 
-            if report:
-                report_id = report["_id"]
+        if not report:
+            logger.error(f"Failed to find report by backtest id: {backtest_id}")
+            return
 
-                # if report["status"] == ReportStatus.FAILED.value:
-                #     logger.info(
-                #         f"Ignoring backtest: {backtest_id}, "
-                #         f"report status: {report['status']} "
-                #         f"Because it failed before."
-                #     )
+        if len(snapshots) == 0:
+            logger.error(f"Failed to find snapshots by backtest id: {backtest_id}")
+            self._cancel_report(report_id=report["_id"])
+            return
 
-                #     continue
+        if len(orders) == 0:
+            logger.error(f"Failed to find orders by backtest id: {backtest_id}")
+            self._cancel_report(report_id=report["_id"])
+            return
 
-                # if report["status"] == ReportStatus.READY.value:
-                #     logger.info(
-                #         f"Ignoring backtest: {backtest_id}, "
-                #         f"report status: {report['status']} "
-                #         f"Because it is already ready."
-                #     )
+        report_id = report["_id"]
+        allocation = snapshots[0]["allocation"]
 
-                #     continue
+        logger.info(f"Backtest id: {backtest_id}")
+        logger.info(f"Report id: {report_id}")
+        logger.info(f"Orders count: {len(orders)}")
+        logger.info(f"Snapshots count: {len(snapshots)}")
+        logger.info(f"Allocation: {allocation:,.2f}")
 
-                # if report["status"] == ReportStatus.BUILDING.value:
-                #     logger.info(
-                #         f"Ignoring backtest: {backtest_id}, "
-                #         f"report status: {report['status']} "
-                #         f"Because it is already building."
-                #     )
-
-                #     continue
-
-            else:
-                report_id = self._store_report(
-                    {
-                        "backtest_id": backtest_id,
-                        "status": ReportStatus.BUILDING.value,
-                    }
-                )
-
-                report = self._get_report_by_id(report_id)
-
-                if not report:
-                    logger.error(f"Failed to create report for backtest {backtest_id}")
-
-                    self._update_report(
-                        report_id=report_id,
-                        data={
-                            "status": ReportStatus.FAILED.value,
-                        },
-                    )
-
-                    continue
-
-            self._backtest = backtest
-            self._report = report
-            self._orders = self._get_orders_by_backtest_id(session_id)
-            self._snapshots = self._get_snapshots_by_backtest_id(session_id)
-            self._allocation = self._snapshots[0]["allocation"]
-
-            backtest_id = self._backtest["_id"]
-            session_id = self._backtest["session_id"]
-            report_id = self._report["_id"]
-            orders = self._orders
-            snapshots = self._snapshots
-            allocation = self._allocation
-
-            logger.info(f"Backtest id: {backtest_id}")
-            logger.info(f"Session id: {session_id}")
-            logger.info(f"Report id: {report_id}")
-            logger.info(f"Orders count: {len(orders)}")
-            logger.info(f"Snapshots count: {len(snapshots)}")
-            logger.info(f"Allocation: {allocation:,.2f}")
-
-            self._perform_report()
+        self._perform_report(
+            report,
+            orders,
+            snapshots,
+        )
 
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
-    def _perform_report(self) -> None:
-        if self._report is None:
-            return
-
-        orders = self._orders
-        allocation = self._allocation
-        report_id = self._report["_id"]
+    def _perform_report(
+        self,
+        report: Dict[str, Any],
+        orders: List[Dict[str, Any]],
+        snapshots: List[Dict[str, Any]],
+    ) -> None:
+        allocation = snapshots[0]["allocation"]
+        report_id = report["_id"]
 
         (
             returns,
@@ -197,6 +147,14 @@ class ProcessBacktestTask:
             },
         )
 
+    def _cancel_report(self, report_id: str) -> None:
+        self._update_report(
+            report_id=report_id,
+            data={
+                "status": ReportStatus.FAILED.value,
+            },
+        )
+
     def _get_cumulative_returns_from_orders(
         self,
         orders: List[Dict[str, Any]],
@@ -230,6 +188,18 @@ class ProcessBacktestTask:
             },
         )
 
+    def _get_backtest_by_report_id(self, report_id: str) -> Optional[Dict[str, Any]]:
+        return self._backtest_repository.find(
+            query_filters={"report_id": report_id},
+        )[0]
+
+    def _get_pending_reports(self) -> List[Dict[str, Any]]:
+        return self._report_repository.find(
+            query_filters={
+                "status": ReportStatus.PENDING.value,
+            },
+        )
+
     def _get_report_by_backtest_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
         report = self._report_repository.find(
             query_filters={"backtest_id": backtest_id},
@@ -244,19 +214,19 @@ class ProcessBacktestTask:
 
         return report[0] if report else None
 
-    def _get_orders_by_backtest_id(self, session_id: str) -> List[Dict[str, Any]]:
+    def _get_orders_by_backtest_id(self, backtest_id: str) -> List[Dict[str, Any]]:
         return self._order_repository.find(
             limit=9**100,
             query_filters={
                 "backtest": True,
-                "backtest_id": session_id,
+                "backtest_id": backtest_id,
             },
         )
 
-    def _get_snapshots_by_backtest_id(self, session_id: str) -> List[Dict[str, Any]]:
+    def _get_snapshots_by_backtest_id(self, backtest_id: str) -> List[Dict[str, Any]]:
         return self._snapshot_repository.find(
             limit=9**100,
-            query_filters={"session_id": session_id},
+            query_filters={"backtest_id": backtest_id},
         )
 
     def _update_report(self, report_id: str, data: Dict[str, Any]) -> None:
@@ -312,9 +282,9 @@ class ProcessBacktestTask:
 
 
 @shared_task(name="apps.core.tasks.process_backtest")
-def process_backtest() -> Dict[str, Any]:
+def process_backtest(backtest_id: Optional[str] = None) -> Dict[str, Any]:
     task = ProcessBacktestTask()
-    task.run()
+    task.run(backtest_id=backtest_id)
 
     return {
         "status": "success",

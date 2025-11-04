@@ -31,8 +31,8 @@ def config_loggers(*args: Any, **kwargs: Any) -> None:  # noqa: ARG001
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    "process_backtest_schedule": {
-        "task": "apps.core.tasks.process_backtest",
-        "schedule": crontab(minute="*/1"),
-    },
+    # "process_backtest_schedule": {
+    #     "task": "apps.core.tasks.process_backtest",
+    #     "schedule": crontab(minute="*/1"),
+    # },
 }

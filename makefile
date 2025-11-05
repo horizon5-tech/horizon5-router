@@ -12,3 +12,6 @@ run-production:
 
 test-e2e:
 	docker compose exec django python manage.py test tests.e2e
+
+clean-db:
+	docker compose exec django python manage.py clean_db

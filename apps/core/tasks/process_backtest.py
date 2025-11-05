@@ -85,6 +85,7 @@ class ProcessBacktestTask:
             report,
             orders,
             snapshots,
+            backtest_id,
         )
 
     # ───────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ class ProcessBacktestTask:
         report: Dict[str, Any],
         orders: List[Dict[str, Any]],
         snapshots: List[Dict[str, Any]],
+        backtest_id: str,
     ) -> None:
         allocation = snapshots[0]["allocation"]
         report_id = report["_id"]
@@ -124,12 +126,14 @@ class ProcessBacktestTask:
             report_id=str(report_id),
             values=returns,
             dates=cumulative_account_dates,
+            backtest_id=backtest_id,
         )
 
         self._store_performance(
             report_id=str(report_id),
             values=performance,
             dates=cumulative_account_dates,
+            backtest_id=backtest_id,
         )
 
         self._update_report(
@@ -223,9 +227,12 @@ class ProcessBacktestTask:
         report_id: str,
         values: List[float],
         dates: List[datetime],
+        backtest_id: str,
     ) -> List[str]:
         documents = [
             {
+                "backtest": True,
+                "backtest_id": backtest_id,
                 "report_id": report_id,
                 "value": value,
                 "date": date,
@@ -243,9 +250,12 @@ class ProcessBacktestTask:
         report_id: str,
         values: List[float],
         dates: List[datetime],
+        backtest_id: str,
     ) -> List[str]:
         documents = [
             {
+                "backtest": True,
+                "backtest_id": backtest_id,
                 "report_id": report_id,
                 "value": value,
                 "date": date,

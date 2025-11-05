@@ -12,7 +12,9 @@ def post_schema() -> Any:
         "request": inline_serializer(
             name="SnapshotRequest",
             fields={
-                "session_id": serializers.IntegerField(),
+                "backtest": serializers.BooleanField(),
+                "backtest_id": serializers.CharField(),
+                "source": serializers.CharField(),
                 "event": serializers.CharField(),
                 "date": serializers.IntegerField(),
                 "nav": serializers.FloatField(),

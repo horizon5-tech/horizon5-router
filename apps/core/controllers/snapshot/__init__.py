@@ -54,7 +54,10 @@ class SnapshotController(BaseController):
 
         snapshot_id = None
 
-        session_id = body.get("session_id")
+        backtest_id = body.get("backtest_id")
+        backtest = body.get("backtest", False)
+        backtest = bool(backtest if backtest is not None else False)
+        source = body.get("source")
         event = body.get("event")
         date = body.get("date", 0)
         date = float(date if date is not None else 0)
@@ -72,7 +75,9 @@ class SnapshotController(BaseController):
         try:
             snapshot_id = self._model.store(
                 data={
-                    "session_id": session_id,
+                    "backtest_id": backtest_id,
+                    "backtest": backtest,
+                    "source": source,
                     "event": event,
                     "date": date,
                     "nav": nav,
@@ -104,10 +109,20 @@ class SnapshotController(BaseController):
     def _is_post_data_valid(self, body: Dict[str, Any]) -> bool:
         validator = Validator(
             {
-                "session_id": {
-                    "type": "integer",
+                "backtest_id": {
+                    "type": "string",
                     "required": True,
-                    "coerce": int,
+                    "minlength": 1,
+                },
+                "backtest": {
+                    "type": "boolean",
+                    "required": True,
+                    "coerce": bool,
+                },
+                "source": {
+                    "type": "string",
+                    "required": True,
+                    "minlength": 1,
                 },
                 "event": {
                     "type": "string",

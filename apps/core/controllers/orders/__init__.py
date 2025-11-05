@@ -64,7 +64,6 @@ class OrderController(BaseController):
         updated_at = datetime.fromtimestamp(updated_at, tz=UTC)
 
         order = {
-            "id": body.get("id"),
             "backtest": body.get("backtest"),
             "source": body.get("source"),
             "symbol": body.get("symbol"),
@@ -321,11 +320,6 @@ class OrderController(BaseController):
     def _is_post_data_valid(self, body: Dict[str, Any]) -> bool:
         validator = Validator(
             {
-                "id": {
-                    "type": "string",
-                    "required": True,
-                    "minlength": 1,
-                },
                 "backtest": {
                     "type": "boolean",
                     "required": True,

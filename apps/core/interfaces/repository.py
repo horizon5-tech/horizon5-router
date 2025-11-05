@@ -53,3 +53,10 @@ class RepositoryInterface(ABC):
         query_filters: Dict[str, Any],
     ) -> int:
         pass
+
+    @abstractmethod
+    def delete_many(
+        self,
+        query_filters: Dict[str, Any],
+    ) -> int:
+        pass

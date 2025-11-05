@@ -12,7 +12,6 @@ def post_schema() -> Any:
         "request": inline_serializer(
             name="OrderRequest",
             fields={
-                "id": serializers.CharField(),
                 "backtest": serializers.BooleanField(),
                 "backtest_id": serializers.CharField(required=False, allow_null=True),
                 "source": serializers.CharField(),

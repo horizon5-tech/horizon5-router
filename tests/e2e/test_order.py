@@ -26,7 +26,6 @@ class TestOrder(TestWrapper):
             "POST",
             f"{self._base_url}/api/order/",
             body={
-                "id": "31d1249a-8e3f-41ee-a663-f4746dc603a0",
                 "backtest": True,
                 "backtest_id": "690a08adc741ec5f14b8e628",
                 "source": "ema5_breakout",

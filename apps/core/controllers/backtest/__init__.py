@@ -167,7 +167,7 @@ class BacktestController(BaseController):
         ):
             try:
                 backtest_id_str = str(id)
-                process_backtest.apply_async(args=[backtest_id_str], countdown=60)  # type: ignore
+                process_backtest.apply_async(args=[backtest_id_str], countdown=5)  # type: ignore
             except Exception as e:
                 logger.error(f"Failed to trigger process_backtest task: {e}")
 

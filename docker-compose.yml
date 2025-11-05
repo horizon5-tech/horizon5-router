@@ -18,9 +18,35 @@ services:
     networks:
       - horizon-network
     depends_on:
-      - redis
-      - horizon-mongodb
-    command: python manage.py runserver 0.0.0.0:8000
+      redis:
+        condition: service_healthy
+      horizon-mongodb:
+        condition: service_healthy
+    command: uvicorn config.asgi:application --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-4} --loop uvloop --http httptools
+    deploy:
+      resources:
+        limits:
+          cpus: "${DOCKER_CPU_LIMIT:-4.0}"
+          memory: ${DOCKER_MEMORY_LIMIT:-4G}
+        reservations:
+          cpus: "${DOCKER_CPU_RESERVATION:-2.0}"
+          memory: ${DOCKER_MEMORY_RESERVATION:-2G}
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.socket(); s.connect(('localhost', 8000)); s.close()",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   redis:
     image: redis:7-alpine
@@ -30,6 +56,24 @@ services:
       - "6379:6379"
     networks:
       - horizon-network
+    command: redis-server --maxclients 10000 --tcp-backlog 511 --timeout 300
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "1.0"
+          memory: 1G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   horizon-mongodb:
     image: mongo:7
@@ -46,33 +90,73 @@ services:
       - horizon_mongodb_data:/data/db
     networks:
       - horizon-network
+    command: mongod --wiredTigerCacheSizeGB 2 --maxConns 10000
+    deploy:
+      resources:
+        limits:
+          cpus: "4.0"
+          memory: 4G
+        reservations:
+          cpus: "2.0"
+          memory: 2G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
 
   celery-worker:
     build: .
     container_name: horizon-celery-worker
     depends_on:
-      - django
-      - redis
+      redis:
+        condition: service_healthy
+      horizon-mongodb:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.development
       - CELERY_BROKER_URL=redis://redis:6379/1
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
-    command: celery -A config.celery.app worker --loglevel=INFO --concurrency=2
+    command: celery -A config.celery.app worker --loglevel=INFO --concurrency=${CELERY_WORKER_CONCURRENCY:-4} --max-tasks-per-child=1000 --max-memory-per-child=200000
     restart: unless-stopped
     volumes:
       - .:/app
       - ./logs:/app/logs
     networks:
       - horizon-network
+    deploy:
+      resources:
+        limits:
+          cpus: "${CELERY_CPU_LIMIT:-2.0}"
+          memory: ${CELERY_MEMORY_LIMIT:-2G}
+        reservations:
+          cpus: "1.0"
+          memory: 1G
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config.celery.app", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   celery-beat:
     build: .
     container_name: horizon-celery-beat
     depends_on:
-      - redis
-      - horizon-mongodb
+      redis:
+        condition: service_healthy
+      horizon-mongodb:
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -86,6 +170,14 @@ services:
       - ./logs:/app/logs
     networks:
       - horizon-network
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
 networks:
   horizon-network:

@@ -139,6 +139,9 @@ class ProcessBacktestTask:
         self._update_report(
             report_id=report_id,
             data={
+                "allocation": allocation,
+                "performance": performance[-1] if performance else 0.0,
+                "profits": returns[-1] if returns else 0.0,
                 "r2": r2,
                 "cagr": cagr,
                 "calmar_ratio": calmar_ratio,
@@ -152,6 +155,16 @@ class ProcessBacktestTask:
                 "status": ReportStatus.READY.value,
             },
         )
+
+        logger.info(f"Performance: {performance[-1]:.2%}")
+        logger.info(f"Profits: {profits[-1]:.2f}")
+        logger.info(f"Max drawdown: {max_drawdown:.2%}")
+        logger.info("-")
+        logger.info(f"R2: {r2:.2f}")
+        logger.info(f"Sharpe ratio: {sharpe_ratio:.2f}")
+        logger.info(f"Profit factor: {profit_factor:.2f}")
+        logger.info(f"Recovery factor: {recovery_factor:.2f}")
+        logger.info(f"Expected shortfall: {expected_shortfall:.2f}")
 
     def _cancel_report(self, report_id: str) -> None:
         self._update_report(
@@ -177,14 +190,15 @@ class ProcessBacktestTask:
         performance = []
         profits = []
         cumulative_account_dates = []
-        total = 0.0
+        cumulative_profits = 0.0
 
         for order in orders:
-            total += order.get("profit", 0.0)
-            returns.append(total)
-            growth_pct = ((allocation + total) / allocation - 1) * 100
+            profit = order.get("profit", 0.0)
+            cumulative_profits += order.get("profit", 0.0)
+            returns.append(cumulative_profits)
+            growth_pct = (allocation + cumulative_profits) / allocation - 1
             performance.append(growth_pct)
-            profits.append(order.get("profit", 0.0))
+            profits.append(profit)
             cumulative_account_dates.append(order.get("created_at"))
 
         return (

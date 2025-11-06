@@ -72,20 +72,39 @@ class ProcessBacktestTask:
             self._cancel_report(report_id=report["_id"])
             return
 
-        report_id = report["_id"]
-        allocation = snapshots[0]["allocation"]
+        strategies = {}
 
-        logger.info(f"Backtest id: {backtest_id}")
-        logger.info(f"Report id: {report_id}")
-        logger.info(f"Orders count: {len(orders)}")
-        logger.info(f"Snapshots count: {len(snapshots)}")
-        logger.info(f"Allocation: {allocation:,.2f}")
+        for order in orders:
+            source = order.get("source")
+
+            if source not in strategies:
+                strategies[source] = []
+
+            strategies[source].append(order)
+
+        for strategy, orders_by_strategy in strategies.items():
+            snapshots_by_strategy = [
+                snapshot for snapshot in snapshots if snapshot.get("source") == strategy
+            ]
+
+            if len(snapshots_by_strategy) == 0:
+                logger.error(f"No snapshots found for strategy: {strategy}")
+                continue
+
+            self._perform_report(
+                backtest_id=backtest_id,
+                source=strategy,
+                report=report,
+                orders=orders_by_strategy,
+                snapshots=snapshots_by_strategy,
+            )
 
         self._perform_report(
-            report,
-            orders,
-            snapshots,
-            backtest_id,
+            backtest_id=backtest_id,
+            source="portfolio",
+            report=report,
+            orders=orders,
+            snapshots=snapshots,
         )
 
     # ───────────────────────────────────────────────────────────
@@ -93,6 +112,7 @@ class ProcessBacktestTask:
     # ───────────────────────────────────────────────────────────
     def _perform_report(
         self,
+        source: str,
         report: Dict[str, Any],
         orders: List[Dict[str, Any]],
         snapshots: List[Dict[str, Any]],
@@ -101,9 +121,20 @@ class ProcessBacktestTask:
         allocation = snapshots[0]["allocation"]
         report_id = report["_id"]
 
+        logger.info("")
+        logger.info("")
+        logger.info(f"Generating report for: {source}")
+        logger.info("----")
+        logger.info(f"Strategy: {source}")
+        logger.info(f"Orders count: {len(orders)}")
+        logger.info(f"Snapshots count: {len(snapshots)}")
+        logger.info(f"Allocation: {allocation:,.2f}")
+        logger.info("")
+
         (
             returns,
             performance,
+            equity_curve,
             profits,
             cumulative_account_dates,
         ) = self._get_cumulative_returns_from_orders(
@@ -114,13 +145,13 @@ class ProcessBacktestTask:
         r2 = get_r2_from(performance)
         cagr = get_cagr_from(performance)
         calmar_ratio = get_calmar_ratio_from(performance)
-        expected_shortfall = get_cvar_from(performance, cutoff=0.05)
+        expected_shortfall = get_cvar_from(equity_curve, cutoff=0.05)
         max_drawdown = get_max_drawdown_from(performance)
         profit_factor = get_profit_factor_from(profits)
         recovery_factor = get_recovery_factor_from(performance)
         sharpe_ratio = get_sharpe_ratio_from_orders(performance, risk_free_rate=0.0)
         sortino_ratio = get_sortino_ratio_from(performance)
-        ulcer_index = get_ulcer_index_from(performance)
+        ulcer_index = get_ulcer_index_from(equity_curve)
 
         self._store_returns(
             report_id=str(report_id),
@@ -157,9 +188,8 @@ class ProcessBacktestTask:
         )
 
         logger.info(f"Performance: {performance[-1]:.2%}")
-        logger.info(f"Profits: {profits[-1]:.2f}")
+        logger.info(f"Profits: {returns[-1]:,.2f}")
         logger.info(f"Max drawdown: {max_drawdown:.2%}")
-        logger.info("-")
         logger.info(f"R2: {r2:.2f}")
         logger.info(f"Sharpe ratio: {sharpe_ratio:.2f}")
         logger.info(f"Profit factor: {profit_factor:.2f}")
@@ -185,9 +215,25 @@ class ProcessBacktestTask:
         self,
         orders: List[Dict[str, Any]],
         allocation: float,
-    ) -> Tuple[List[float], List[float], List[float], List[datetime]]:
+    ) -> Tuple[List[float], List[float], List[float], List[float], List[datetime]]:
+        """
+        Calculate cumulative metrics from a list of orders.
+
+        Args:
+            orders: List of order dictionaries containing profit and created_at
+            allocation: Initial capital allocation
+
+        Returns:
+            Tuple containing:
+                - returns: Cumulative profit/loss in absolute terms (e.g., [500, 1200, 1800])
+                - performance: Growth percentage at each point (e.g., [0.005, 0.012, 0.018])
+                - equity_curve: Total portfolio value over time (e.g., [100500, 101200, 101800])
+                - profits: Individual profit per order (e.g., [500, 700, 600])
+                - cumulative_account_dates: Timestamp of each order
+        """
         returns = []
         performance = []
+        equity_curve = []
         profits = []
         cumulative_account_dates = []
         cumulative_profits = 0.0
@@ -196,7 +242,9 @@ class ProcessBacktestTask:
             profit = order.get("profit", 0.0)
             cumulative_profits += order.get("profit", 0.0)
             returns.append(cumulative_profits)
-            growth_pct = (allocation + cumulative_profits) / allocation - 1
+            equity = allocation + cumulative_profits
+            growth_pct = equity / allocation - 1
+            equity_curve.append(equity)
             performance.append(growth_pct)
             profits.append(profit)
             cumulative_account_dates.append(order.get("created_at"))
@@ -204,6 +252,7 @@ class ProcessBacktestTask:
         return (
             returns,
             performance,
+            equity_curve,
             profits,
             cumulative_account_dates,
         )
@@ -222,12 +271,16 @@ class ProcessBacktestTask:
                 "backtest": True,
                 "backtest_id": backtest_id,
             },
+            sort_by="created_at",
+            sort_direction="asc",
         )
 
     def _get_snapshots_by_backtest_id(self, backtest_id: str) -> List[Dict[str, Any]]:
         return self._snapshot_model.find(
             limit=9**100,
             query_filters={"backtest_id": backtest_id},
+            sort_by="created_at",
+            sort_direction="asc",
         )
 
     def _update_report(self, report_id: str, data: Dict[str, Any]) -> None:

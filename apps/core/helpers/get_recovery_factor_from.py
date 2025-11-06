@@ -8,14 +8,14 @@ def get_recovery_factor_from(
     values: List[float],
 ) -> float:
     """
-    Calculate the Recovery Factor from portfolio values.
+    Calculate the Recovery Factor from returns.
 
     Recovery Factor measures how efficiently a strategy recovers from losses by dividing
     total net profit by maximum drawdown. It indicates how many units of profit are
     generated for each unit of maximum loss.
 
     Parameters:
-        values: List of portfolio values over time (e.g., [100, 110, 85, 120, 130])
+        values: List of returns over time (e.g., [0.0, 0.01, -0.02, 0.05])
 
     Returns:
         Recovery factor as a positive float (e.g., 4.22)
@@ -40,6 +40,6 @@ def get_recovery_factor_from(
     if max_dd == 0:
         return 0.0
 
-    total_return = (values_array[-1] - values_array[0]) / values_array[0] if values_array[0] != 0 else 0.0
+    total_return = values_array[-1]
 
     return float(total_return / max_dd)

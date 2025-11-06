@@ -10,6 +10,8 @@ run-dev: clean
 	docker compose up
 
 run-production:
+	docker compose down
+	docker compose build
 	docker compose up -d
 
 test-e2e:

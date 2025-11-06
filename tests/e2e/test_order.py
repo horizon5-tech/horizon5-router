@@ -28,7 +28,7 @@ class TestOrder(TestWrapper):
             body={
                 "backtest": True,
                 "backtest_id": "690a08adc741ec5f14b8e628",
-                "source": "ema5_breakout",
+                "strategy_id": "ema5_breakout",
                 "symbol": "BTCUSDT",
                 "gateway": "binance",
                 "side": "buy",
@@ -58,7 +58,6 @@ class TestOrder(TestWrapper):
 
         order_id = data["data"]["_id"]
         orders.append(order_id)
-        self.log.info(f"Response: {response.json()}")
         self.log.info(f"Order ID added: {order_id}")
 
     def test_02_get_all_orders(self) -> None:
@@ -77,8 +76,6 @@ class TestOrder(TestWrapper):
         self.assertIn("success", data)
         self.assertTrue(data["success"])
 
-        self.log.info(f"Response: {response.json()}")
-
     def test_03_update_order(self) -> None:
         self.log.info(f"Available order IDs: {orders}")
 
@@ -89,7 +86,7 @@ class TestOrder(TestWrapper):
             "PUT",
             f"{self._base_url}/api/order/{order_id}/",
             body={
-                "source": "updated_source",
+                "strategy_id": "updated_source",
                 "symbol": "ETHUSDT",
                 "status": "filled",
                 "volume": 0.1,
@@ -107,8 +104,6 @@ class TestOrder(TestWrapper):
         self.assertIsInstance(data, dict)
         self.assertIn("success", data)
         self.assertTrue(data["success"])
-
-        self.log.info(f"Response: {response.json()}")
 
     def test_04_delete_orders(self) -> None:
         self.log.info(f"Deleting order IDs: {orders}")

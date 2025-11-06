@@ -25,7 +25,6 @@ class BacktestReportTask:
     _orders: List[Dict[str, Any]]
     _snapshots: List[Dict[str, Any]]
 
-    _ready: bool
     _folder: Optional[Path]
 
     # ───────────────────────────────────────────────────────────
@@ -36,7 +35,6 @@ class BacktestReportTask:
         self._report_model = ReportModel()
         self._order_model = OrderModel()
         self._snapshot_model = SnapshotModel()
-        self._ready = False
         self._setup()
 
     # ───────────────────────────────────────────────────────────
@@ -100,7 +98,6 @@ class BacktestReportTask:
 
         self._folder = Path(settings.BASE_DIR) / "storage" / "reports" / str(report_id)
         self._folder.mkdir(parents=True, exist_ok=True)
-        self._ready = True
 
     def _get_backtest_by_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
         results = BacktestModel().find(

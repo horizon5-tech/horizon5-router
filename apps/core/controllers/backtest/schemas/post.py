@@ -13,6 +13,7 @@ def post_schema() -> Any:
             name="BacktestRequest",
             fields={
                 "asset": serializers.CharField(),
+                "strategies": serializers.CharField(),
                 "from_date": serializers.IntegerField(),
                 "to_date": serializers.IntegerField(),
             },

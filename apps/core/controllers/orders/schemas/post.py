@@ -14,7 +14,7 @@ def post_schema() -> Any:
             fields={
                 "backtest": serializers.BooleanField(),
                 "backtest_id": serializers.CharField(required=False, allow_null=True),
-                "source": serializers.CharField(),
+                "strategy_id": serializers.CharField(),
                 "symbol": serializers.CharField(),
                 "gateway": serializers.CharField(),
                 "side": serializers.CharField(),

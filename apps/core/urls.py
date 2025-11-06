@@ -54,5 +54,10 @@ urlpatterns = [
         SnapshotController.as_view(http_method_names=["post"]),
         name="snapshot.post",
     ),
+    path(
+        "snapshot/<str:id>/",
+        SnapshotController.as_view(http_method_names=["put", "patch", "delete"]),
+        name="snapshot.update",
+    ),
     *router.urls,
 ]

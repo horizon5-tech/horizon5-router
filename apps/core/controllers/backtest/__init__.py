@@ -58,25 +58,20 @@ class BacktestController(BaseController):
             )
 
         backtest_id = None
-        asset = body.get("asset")
+        backtest_data = dict(body)
 
         from_date = body.get("from_date", 0)
         from_date = float(from_date if from_date is not None else 0)
-        from_date = datetime.fromtimestamp(from_date, tz=UTC)
+        backtest_data["from_date"] = datetime.fromtimestamp(from_date, tz=UTC)
 
         to_date = body.get("to_date", 0)
         to_date = float(to_date if to_date is not None else 0)
-        to_date = datetime.fromtimestamp(to_date, tz=UTC)
+        backtest_data["to_date"] = datetime.fromtimestamp(to_date, tz=UTC)
+
+        backtest_data["status"] = BacktestStatus.RUNNING.value
 
         try:
-            backtest_id = self._model.store(
-                data={
-                    "asset": asset,
-                    "from_date": from_date,
-                    "to_date": to_date,
-                    "status": BacktestStatus.RUNNING.value,
-                }
-            )
+            backtest_id = self._model.store(data=backtest_data)
 
         except Exception as e:
             logger.error(f"Failed to create backtest: {e}")
@@ -236,6 +231,11 @@ class BacktestController(BaseController):
         validator = Validator(
             {
                 "asset": {
+                    "type": "string",
+                    "required": True,
+                    "minlength": 1,
+                },
+                "strategies": {
                     "type": "string",
                     "required": True,
                     "minlength": 1,

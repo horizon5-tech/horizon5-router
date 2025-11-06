@@ -25,7 +25,7 @@ def update_schema() -> Any:
             name="OrderUpdateRequest",
             fields={
                 "backtest": serializers.BooleanField(required=False),
-                "source": serializers.CharField(required=False),
+                "strategy_id": serializers.CharField(required=False),
                 "symbol": serializers.CharField(required=False),
                 "gateway": serializers.CharField(required=False),
                 "side": serializers.CharField(required=False),

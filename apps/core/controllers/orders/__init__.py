@@ -55,55 +55,20 @@ class OrderController(BaseController):
                 status=HttpStatus.BAD_REQUEST,
             )
 
+        order_data = dict(body)
+
         created_at = body.get("created_at", 0)
         created_at = float(created_at if created_at is not None else 0)
-        created_at = datetime.fromtimestamp(created_at, tz=UTC)
+        order_data["created_at"] = datetime.fromtimestamp(created_at, tz=UTC)
 
         updated_at = body.get("updated_at", 0)
         updated_at = float(updated_at if updated_at is not None else 0)
-        updated_at = datetime.fromtimestamp(updated_at, tz=UTC)
-
-        order = {
-            "backtest": body.get("backtest"),
-            "source": body.get("source"),
-            "symbol": body.get("symbol"),
-            "gateway": body.get("gateway"),
-            "side": body.get("side"),
-            "order_type": body.get("order_type"),
-            "status": body.get("status"),
-            "volume": body.get("volume"),
-            "executed_volume": body.get("executed_volume"),
-            "price": body.get("price"),
-            "filled": body.get("filled"),
-            "created_at": created_at,
-            "updated_at": updated_at,
-        }
-
-        if "backtest_id" in body and body.get("backtest_id") is not None:
-            order["backtest_id"] = body.get("backtest_id")
-
-        if "close_price" in body and body.get("close_price") is not None:
-            order["close_price"] = body.get("close_price")
-
-        if "take_profit_price" in body and body.get("take_profit_price") is not None:
-            order["take_profit_price"] = body.get("take_profit_price")
-
-        if "stop_loss_price" in body and body.get("stop_loss_price") is not None:
-            order["stop_loss_price"] = body.get("stop_loss_price")
-
-        if "client_order_id" in body and body.get("client_order_id") is not None:
-            order["client_order_id"] = body.get("client_order_id")
-
-        if "profit" in body and body.get("profit") is not None:
-            order["profit"] = body.get("profit")
-
-        if "profit_percentage" in body and body.get("profit_percentage") is not None:
-            order["profit_percentage"] = body.get("profit_percentage")
+        order_data["updated_at"] = datetime.fromtimestamp(updated_at, tz=UTC)
 
         order_id = None
 
         try:
-            order_id = self._model.store(data=order)
+            order_id = self._model.store(data=order_data)
         except Exception as e:
             logger.error(f"Failed to create order: {e}")
 
@@ -163,8 +128,8 @@ class OrderController(BaseController):
         if "backtest" in body:
             to_update["backtest"] = body.get("backtest")
 
-        if "source" in body:
-            to_update["source"] = body.get("source")
+        if "strategy_id" in body:
+            to_update["strategy_id"] = body.get("strategy_id")
 
         if "symbol" in body:
             to_update["symbol"] = body.get("symbol")
@@ -329,7 +294,7 @@ class OrderController(BaseController):
                     "required": False,
                     "nullable": True,
                 },
-                "source": {
+                "strategy_id": {
                     "type": "string",
                     "required": True,
                     "minlength": 1,
@@ -435,7 +400,7 @@ class OrderController(BaseController):
                     "type": "boolean",
                     "required": False,
                 },
-                "source": {
+                "strategy_id": {
                     "type": "string",
                     "required": False,
                     "minlength": 1,

@@ -6,8 +6,6 @@ from apps.core.models.base import BaseModel
 from apps.core.repositories.backtest import BacktestRepository
 from apps.core.repositories.order import OrderRepository
 from apps.core.repositories.report import ReportRepository
-from apps.core.repositories.report_performances import ReportPerformancesRepository
-from apps.core.repositories.report_returns import ReportReturnsRepository
 from apps.core.repositories.snapshot import SnapshotRepository
 
 
@@ -20,8 +18,6 @@ class BacktestModel(BaseModel):
         self._logger = logging.getLogger("django")
         self._repository = BacktestRepository()
         self._report_repository = ReportRepository()
-        self._report_returns_repository = ReportReturnsRepository()
-        self._report_performances_repository = ReportPerformancesRepository()
         self._snapshot_repository = SnapshotRepository()
         self._order_repository = OrderRepository()
 
@@ -49,18 +45,6 @@ class BacktestModel(BaseModel):
 
         if response and backtest_id:
             self._report_repository.delete_many(
-                query_filters={
-                    "backtest_id": backtest_id,
-                }
-            )
-
-            self._report_returns_repository.delete_many(
-                query_filters={
-                    "backtest_id": backtest_id,
-                }
-            )
-
-            self._report_performances_repository.delete_many(
                 query_filters={
                     "backtest_id": backtest_id,
                 }

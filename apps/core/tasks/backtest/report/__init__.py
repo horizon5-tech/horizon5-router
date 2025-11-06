@@ -1,9 +1,7 @@
 import logging
-from datetime import UTC, datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from bson import ObjectId
-from celery import shared_task
 
 from apps.core.enums.report_status import ReportStatus
 from apps.core.helpers.get_cagr_from import get_cagr_from
@@ -19,26 +17,22 @@ from apps.core.helpers.get_ulcer_index_from import get_ulcer_index_from
 from apps.core.models.backtest import BacktestModel
 from apps.core.models.order import OrderModel
 from apps.core.models.report import ReportModel
-from apps.core.models.report_performances import ReportPerformancesModel
-from apps.core.models.report_returns import ReportReturnsModel
 from apps.core.models.snapshot import SnapshotModel
 
 logger = logging.getLogger("django")
 
 
-class ProcessBacktestTask:
+class BacktestReportTask:
     # ───────────────────────────────────────────────────────────
     # PROPERTIES
     # ───────────────────────────────────────────────────────────
-    _name: str = "process_backtest"
+    _name: str = "make_backtest_report"
 
     # ───────────────────────────────────────────────────────────
     # CONSTRUCTOR
     # ───────────────────────────────────────────────────────────
     def __init__(self) -> None:
         self._report_model = ReportModel()
-        self._report_returns_model = ReportReturnsModel()
-        self._report_performances_model = ReportPerformancesModel()
         self._order_model = OrderModel()
         self._snapshot_model = SnapshotModel()
 
@@ -92,7 +86,6 @@ class ProcessBacktestTask:
                 continue
 
             self._perform_report(
-                backtest_id=backtest_id,
                 source=strategy,
                 report=report,
                 orders=orders_by_strategy,
@@ -100,7 +93,6 @@ class ProcessBacktestTask:
             )
 
         self._perform_report(
-            backtest_id=backtest_id,
             source="portfolio",
             report=report,
             orders=orders,
@@ -116,7 +108,6 @@ class ProcessBacktestTask:
         report: Dict[str, Any],
         orders: List[Dict[str, Any]],
         snapshots: List[Dict[str, Any]],
-        backtest_id: str,
     ) -> None:
         allocation = snapshots[0]["allocation"]
         report_id = report["_id"]
@@ -136,7 +127,6 @@ class ProcessBacktestTask:
             performance,
             equity_curve,
             profits,
-            cumulative_account_dates,
         ) = self._get_cumulative_returns_from_orders(
             orders=orders,
             allocation=allocation,
@@ -152,20 +142,6 @@ class ProcessBacktestTask:
         sharpe_ratio = get_sharpe_ratio_from_orders(performance, risk_free_rate=0.0)
         sortino_ratio = get_sortino_ratio_from(performance)
         ulcer_index = get_ulcer_index_from(equity_curve)
-
-        self._store_returns(
-            report_id=str(report_id),
-            values=returns,
-            dates=cumulative_account_dates,
-            backtest_id=backtest_id,
-        )
-
-        self._store_performance(
-            report_id=str(report_id),
-            values=performance,
-            dates=cumulative_account_dates,
-            backtest_id=backtest_id,
-        )
 
         self._update_report(
             report_id=report_id,
@@ -215,12 +191,12 @@ class ProcessBacktestTask:
         self,
         orders: List[Dict[str, Any]],
         allocation: float,
-    ) -> Tuple[List[float], List[float], List[float], List[float], List[datetime]]:
+    ) -> Tuple[List[float], List[float], List[float], List[float]]:
         """
         Calculate cumulative metrics from a list of orders.
 
         Args:
-            orders: List of order dictionaries containing profit and created_at
+            orders: List of order dictionaries containing profit
             allocation: Initial capital allocation
 
         Returns:
@@ -229,13 +205,11 @@ class ProcessBacktestTask:
                 - performance: Growth percentage at each point (e.g., [0.005, 0.012, 0.018])
                 - equity_curve: Total portfolio value over time (e.g., [100500, 101200, 101800])
                 - profits: Individual profit per order (e.g., [500, 700, 600])
-                - cumulative_account_dates: Timestamp of each order
         """
         returns = []
         performance = []
         equity_curve = []
         profits = []
-        cumulative_account_dates = []
         cumulative_profits = 0.0
 
         for order in orders:
@@ -247,14 +221,12 @@ class ProcessBacktestTask:
             equity_curve.append(equity)
             performance.append(growth_pct)
             profits.append(profit)
-            cumulative_account_dates.append(order.get("created_at"))
 
         return (
             returns,
             performance,
             equity_curve,
             profits,
-            cumulative_account_dates,
         )
 
     def _get_report_by_backtest_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
@@ -288,60 +260,3 @@ class ProcessBacktestTask:
             query_filters={"_id": ObjectId(report_id)},
             data=data,
         )
-
-    def _store_returns(
-        self,
-        report_id: str,
-        values: List[float],
-        dates: List[datetime],
-        backtest_id: str,
-    ) -> List[str]:
-        documents = [
-            {
-                "backtest": True,
-                "backtest_id": backtest_id,
-                "report_id": report_id,
-                "value": value,
-                "date": date,
-            }
-            for value, date in zip(
-                values,
-                dates,
-                strict=True,
-            )
-        ]
-        return self._report_returns_model.store_many(data=documents)
-
-    def _store_performance(
-        self,
-        report_id: str,
-        values: List[float],
-        dates: List[datetime],
-        backtest_id: str,
-    ) -> List[str]:
-        documents = [
-            {
-                "backtest": True,
-                "backtest_id": backtest_id,
-                "report_id": report_id,
-                "value": value,
-                "date": date,
-            }
-            for value, date in zip(
-                values,
-                dates,
-                strict=True,
-            )
-        ]
-        return self._report_performances_model.store_many(data=documents)
-
-
-@shared_task(name="apps.core.tasks.process_backtest")
-def process_backtest(backtest_id: Optional[str] = None) -> Dict[str, Any]:
-    task = ProcessBacktestTask()
-    task.run(backtest_id=backtest_id)
-
-    return {
-        "status": "success",
-        "time": datetime.now(tz=UTC),
-    }

@@ -32,7 +32,7 @@ app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
     # "process_backtest_schedule": {
-    #     "task": "apps.core.tasks.process_backtest",
+    #     "task": "apps.core.tasks.make_backtest_report",
     #     "schedule": crontab(minute="*/1"),
     # },
 }

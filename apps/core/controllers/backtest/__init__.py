@@ -14,7 +14,7 @@ from apps.core.controllers.base import BaseController
 from apps.core.enums.backtest_status import BacktestStatus
 from apps.core.enums.http_status import HttpStatus
 from apps.core.models.backtest import BacktestModel
-from apps.core.tasks import process_backtest
+from apps.core.tasks import make_backtest_report
 
 from .schemas.delete import delete_schema
 from .schemas.get import get_schema
@@ -166,12 +166,12 @@ class BacktestController(BaseController):
             and new_status == BacktestStatus.COMPLETED.value
         ):
             try:
-                process_backtest.apply_async(
+                make_backtest_report.apply_async(
                     args=[str(id)],
                     countdown=10,
                 )  # type: ignore
             except Exception as e:
-                logger.error(f"Failed to trigger process_backtest task: {e}")
+                logger.error(f"Failed to trigger make_backtest_report task: {e}")
 
         return self.response(
             success=True,

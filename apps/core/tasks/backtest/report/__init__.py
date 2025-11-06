@@ -1,19 +1,11 @@
 import logging
-from typing import Any, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
+from django.conf import settings
 
 from apps.core.enums.report_status import ReportStatus
-from apps.core.helpers.get_cagr_from import get_cagr_from
-from apps.core.helpers.get_calmar_ratio_from import get_calmar_ratio_from
-from apps.core.helpers.get_cvar_from import get_cvar_from
-from apps.core.helpers.get_max_drawdown_from import get_max_drawdown_from
-from apps.core.helpers.get_profit_factor_from import get_profit_factor_from
-from apps.core.helpers.get_r2_from import get_r2_from
-from apps.core.helpers.get_recovery_factor_from import get_recovery_factor_from
-from apps.core.helpers.get_sharpe_ratio_from import get_sharpe_ratio_from_orders
-from apps.core.helpers.get_sortino_ratio_from import get_sortino_ratio_from
-from apps.core.helpers.get_ulcer_index_from import get_ulcer_index_from
 from apps.core.models.backtest import BacktestModel
 from apps.core.models.order import OrderModel
 from apps.core.models.report import ReportModel
@@ -27,186 +19,88 @@ class BacktestReportTask:
     # PROPERTIES
     # ───────────────────────────────────────────────────────────
     _name: str = "make_backtest_report"
+    _backtest_id: Optional[str]
+    _backtest: Optional[Dict[str, Any]]
+    _report: Optional[Dict[str, Any]]
+    _orders: List[Dict[str, Any]]
+    _snapshots: List[Dict[str, Any]]
+
+    _ready: bool
+    _folder: Optional[Path]
 
     # ───────────────────────────────────────────────────────────
     # CONSTRUCTOR
     # ───────────────────────────────────────────────────────────
-    def __init__(self) -> None:
+    def __init__(self, backtest_id: Optional[str] = None) -> None:
+        self._backtest_id = backtest_id
         self._report_model = ReportModel()
         self._order_model = OrderModel()
         self._snapshot_model = SnapshotModel()
+        self._ready = False
+        self._setup()
 
     # ───────────────────────────────────────────────────────────
     # PUBLIC METHODS
     # ───────────────────────────────────────────────────────────
-    def run(self, backtest_id: Optional[str] = None) -> None:
-        backtest = self._get_backtest_by_id(
-            backtest_id,  # type: ignore
-        )
-
-        if not backtest_id or not backtest:
-            logger.error(f"Failed to find backtest by id: {backtest_id}")
+    def run(self) -> None:
+        if (
+            not self._report
+            or not self._orders
+            or not self._snapshots
+            or not self._folder
+        ):
+            logger.error("Task is not ready")
             return
 
-        report = self._get_report_by_backtest_id(backtest_id)
-        orders = self._get_orders_by_backtest_id(backtest_id)
-        snapshots = self._get_snapshots_by_backtest_id(backtest_id)
+        orders = self._orders
+        snapshots = self._snapshots
+        report = self._report
+        folder = self._folder
 
-        if not report:
-            logger.error(f"Failed to find report by backtest id: {backtest_id}")
-            return
+        report_id = report["_id"]
 
-        if len(snapshots) == 0:
-            logger.error(f"Failed to find snapshots by backtest id: {backtest_id}")
-            self._update_report_to_failed(report_id=report["_id"])
-            return
-
-        if len(orders) == 0:
-            logger.error(f"Failed to find orders by backtest id: {backtest_id}")
-            self._update_report_to_failed(report_id=report["_id"])
-            return
-
-        strategies = {}
-
-        for order in orders:
-            source = order.get("source")
-
-            if source not in strategies:
-                strategies[source] = []
-
-            strategies[source].append(order)
-
-        for strategy, orders_by_strategy in strategies.items():
-            snapshots_by_strategy = [
-                snapshot for snapshot in snapshots if snapshot.get("source") == strategy
-            ]
-
-            if len(snapshots_by_strategy) == 0:
-                logger.error(f"No snapshots found for strategy: {strategy}")
-                continue
-
-            self._perform_report(
-                source=strategy,
-                report=report,
-                orders=orders_by_strategy,
-                snapshots=snapshots_by_strategy,
-            )
-
-        self._perform_report(
-            source="portfolio",
-            report=report,
-            orders=orders,
-            snapshots=snapshots,
+        self._update_report(
+            report_id=report_id,
+            data={"folder": str(folder)},
         )
 
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
-    def _perform_report(
-        self,
-        source: str,
-        report: Dict[str, Any],
-        orders: List[Dict[str, Any]],
-        snapshots: List[Dict[str, Any]],
-    ) -> None:
-        allocation = snapshots[0]["allocation"]
-        report_id = report["_id"]
-
-        logger.info("")
-        logger.info("")
-        logger.info(f"Generating report for: {source}")
-        logger.info("----")
-        logger.info(f"Strategy: {source}")
-        logger.info(f"Orders count: {len(orders)}")
-        logger.info(f"Snapshots count: {len(snapshots)}")
-        logger.info(f"Allocation: {allocation:,.2f}")
-        logger.info("")
-
-        (
-            returns,
-            performance,
-            equity_curve,
-            profits,
-        ) = self._get_cumulative_returns_from_orders(
-            orders=orders,
-            allocation=allocation,
+    def _setup(self) -> None:
+        self._backtest = self._get_backtest_by_id(
+            self._backtest_id,  # type: ignore
         )
 
-        r2 = get_r2_from(performance)
-        cagr = get_cagr_from(performance)
-        calmar_ratio = get_calmar_ratio_from(performance)
-        expected_shortfall = get_cvar_from(equity_curve, cutoff=0.05)
-        max_drawdown = get_max_drawdown_from(performance)
-        profit_factor = get_profit_factor_from(profits)
-        recovery_factor = get_recovery_factor_from(performance)
-        sharpe_ratio = get_sharpe_ratio_from_orders(performance, risk_free_rate=0.0)
-        sortino_ratio = get_sortino_ratio_from(performance)
-        ulcer_index = get_ulcer_index_from(equity_curve)
+        if not self._backtest_id or not self._backtest:
+            logger.error("Failed to find backtest")
+            return
 
-        self._update_report(
-            report_id=report_id,
-            data={
-                "allocation": allocation,
-                "performance": performance[-1] if performance else 0.0,
-                "profits": returns[-1] if returns else 0.0,
-                "r2": r2,
-                "cagr": cagr,
-                "calmar_ratio": calmar_ratio,
-                "expected_shortfall": expected_shortfall,
-                "max_drawdown": max_drawdown,
-                "profit_factor": profit_factor,
-                "recovery_factor": recovery_factor,
-                "sharpe_ratio": sharpe_ratio,
-                "sortino_ratio": sortino_ratio,
-                "ulcer_index": ulcer_index,
-                "status": ReportStatus.READY.value,
-            },
+        self._report = self._get_report_by_backtest_id(
+            self._backtest["_id"],
         )
 
-        logger.info(f"Performance: {performance[-1]:.2%}")
-        logger.info(f"Profits: {returns[-1]:,.2f}")
-        logger.info(f"Max drawdown: {max_drawdown:.2%}")
-        logger.info(f"R2: {r2:.2f}")
-        logger.info(f"Sharpe ratio: {sharpe_ratio:.2f}")
-        logger.info(f"Profit factor: {profit_factor:.2f}")
-        logger.info(f"Recovery factor: {recovery_factor:.2f}")
-        logger.info(f"Expected shortfall: {expected_shortfall:.2f}")
+        if not self._report:
+            logger.error("Failed to find report")
+            return
 
-    def _get_cumulative_returns_from_orders(
-        self,
-        orders: List[Dict[str, Any]],
-        allocation: float,
-    ) -> Tuple[List[float], List[float], List[float], List[float]]:
-        """
-        Returns:
-            Tuple containing:
-                - returns: Cumulative profit/loss in absolute terms (e.g., [500, 1200, 1800])
-                - performance: Growth percentage at each point (e.g., [0.005, 0.012, 0.018])
-                - equity_curve: Total portfolio value over time (e.g., [100500, 101200, 101800])
-                - profits: Individual profit per order (e.g., [500, 700, 600])
-        """
-        returns = []
-        performance = []
-        equity_curve = []
-        profits = []
-        cumulative_profits = 0.0
+        self._orders = self._get_orders_by_backtest_id(self._backtest["_id"])
 
-        for order in orders:
-            profit = order.get("profit", 0.0)
-            cumulative_profits += order.get("profit", 0.0)
-            returns.append(cumulative_profits)
-            equity = allocation + cumulative_profits
-            growth_pct = equity / allocation - 1
-            equity_curve.append(equity)
-            performance.append(growth_pct)
-            profits.append(profit)
+        if len(self._orders) == 0:
+            logger.error("Failed to find orders")
+            return
 
-        return (
-            returns,
-            performance,
-            equity_curve,
-            profits,
-        )
+        self._snapshots = self._get_snapshots_by_backtest_id(self._backtest["_id"])
+
+        if len(self._snapshots) == 0:
+            logger.error("Failed to find snapshots")
+            return
+
+        report_id = self._report["_id"]
+
+        self._folder = Path(settings.BASE_DIR) / "storage" / "reports" / str(report_id)
+        self._folder.mkdir(parents=True, exist_ok=True)
+        self._ready = True
 
     def _get_backtest_by_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
         results = BacktestModel().find(

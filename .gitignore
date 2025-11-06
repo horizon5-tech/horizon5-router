@@ -73,3 +73,5 @@ node_modules/
 *.log
 logs/*.log
 !logs/.gitkeep
+storage/
+.notes

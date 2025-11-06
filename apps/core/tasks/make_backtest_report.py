@@ -8,8 +8,8 @@ from apps.core.tasks.backtest.report import BacktestReportTask
 
 @shared_task(name="apps.core.tasks.make_backtest_report")
 def make_backtest_report(backtest_id: Optional[str] = None) -> Dict[str, Any]:
-    task = BacktestReportTask()
-    task.run(backtest_id=backtest_id)
+    task = BacktestReportTask(backtest_id=backtest_id)
+    task.run()
 
     return {
         "status": "success",

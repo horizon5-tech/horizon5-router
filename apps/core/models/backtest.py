@@ -31,6 +31,7 @@ class BacktestModel(BaseModel):
                 data={
                     "backtest_id": inserted_id,
                     "status": ReportStatus.PENDING.value,
+                    "folder": None,
                 }
             )
 

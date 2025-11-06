@@ -58,12 +58,12 @@ class BacktestReportTask:
 
         if len(snapshots) == 0:
             logger.error(f"Failed to find snapshots by backtest id: {backtest_id}")
-            self._cancel_report(report_id=report["_id"])
+            self._update_report_to_failed(report_id=report["_id"])
             return
 
         if len(orders) == 0:
             logger.error(f"Failed to find orders by backtest id: {backtest_id}")
-            self._cancel_report(report_id=report["_id"])
+            self._update_report_to_failed(report_id=report["_id"])
             return
 
         strategies = {}
@@ -172,33 +172,12 @@ class BacktestReportTask:
         logger.info(f"Recovery factor: {recovery_factor:.2f}")
         logger.info(f"Expected shortfall: {expected_shortfall:.2f}")
 
-    def _cancel_report(self, report_id: str) -> None:
-        self._update_report(
-            report_id=report_id,
-            data={
-                "status": ReportStatus.FAILED.value,
-            },
-        )
-
-    def _get_backtest_by_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
-        results = BacktestModel().find(
-            query_filters={"_id": ObjectId(backtest_id)},
-        )
-
-        return results[0] if results else None
-
     def _get_cumulative_returns_from_orders(
         self,
         orders: List[Dict[str, Any]],
         allocation: float,
     ) -> Tuple[List[float], List[float], List[float], List[float]]:
         """
-        Calculate cumulative metrics from a list of orders.
-
-        Args:
-            orders: List of order dictionaries containing profit
-            allocation: Initial capital allocation
-
         Returns:
             Tuple containing:
                 - returns: Cumulative profit/loss in absolute terms (e.g., [500, 1200, 1800])
@@ -228,6 +207,13 @@ class BacktestReportTask:
             equity_curve,
             profits,
         )
+
+    def _get_backtest_by_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
+        results = BacktestModel().find(
+            query_filters={"_id": ObjectId(backtest_id)},
+        )
+
+        return results[0] if results else None
 
     def _get_report_by_backtest_id(self, backtest_id: str) -> Optional[Dict[str, Any]]:
         report = self._report_model.find(
@@ -259,4 +245,12 @@ class BacktestReportTask:
         self._report_model.update(
             query_filters={"_id": ObjectId(report_id)},
             data=data,
+        )
+
+    def _update_report_to_failed(self, report_id: str) -> None:
+        self._update_report(
+            report_id=report_id,
+            data={
+                "status": ReportStatus.FAILED.value,
+            },
         )

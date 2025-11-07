@@ -2,7 +2,7 @@
 
 clean:
 	: > logs/django.log
-	rm -rf storage/*
+	find storage -mindepth 1 ! -name '.gitignore' -delete
 
 run-dev: clean
 	docker compose down

@@ -30,16 +30,18 @@ class BaseController(APIView):
         sort_direction_param = query_params.get("sort_order", "desc")
         filter_by_param = query_params.get("filter_by", None)
 
-        if not self._is_pagination_params_valid(
+        validation_errors = self._is_pagination_params_valid(
             page_param,
             page_size_param,
             sort_by_param,
             sort_direction_param,
             filter_by_param,
-        ):
+        )
+        if validation_errors:
             return self.response(
                 success=False,
                 message="Invalid pagination parameters",
+                data={"errors": validation_errors},
                 status=HttpStatus.BAD_REQUEST,
             )
 
@@ -133,7 +135,7 @@ class BaseController(APIView):
         sort_by_param: Union[str, List[str], None],
         sort_direction_param: Union[str, List[str], None],
         filter_by_param: Union[str, List[str], None] = None,
-    ) -> bool:
+    ) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
                 "page_param": {
@@ -163,7 +165,7 @@ class BaseController(APIView):
             }  # type: ignore
         )
 
-        return validator.validate(  # type: ignore
+        is_valid = validator.validate(  # type: ignore
             {
                 "page_param": page_param,
                 "page_size_param": page_size_param,
@@ -172,6 +174,11 @@ class BaseController(APIView):
                 "filter_by_param": filter_by_param,
             }
         )
+
+        if not is_valid:
+            return validator.errors  # type: ignore
+
+        return None
 
     def _serialize(self, document: Dict[str, Any]) -> Dict[str, Any]:
         serialized = {}

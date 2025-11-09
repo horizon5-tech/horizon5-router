@@ -1,6 +1,6 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any, ClassVar, Dict, List, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from bson import ObjectId
 from cerberus import Validator
@@ -50,10 +50,12 @@ class BacktestController(BaseController):
         data = getattr(request, "data", {})
         body = data if isinstance(data, dict) else {}
 
-        if not self._is_post_data_valid(body):
+        validation_errors = self._is_post_data_valid(body)
+        if validation_errors:
             return self.response(
                 success=False,
                 message="Invalid request data",
+                data={"errors": validation_errors},
                 status=HttpStatus.BAD_REQUEST,
             )
 
@@ -97,10 +99,12 @@ class BacktestController(BaseController):
         body = data if isinstance(data, dict) else {}
         backtest = None
 
-        if not self._is_update_data_valid(body):
+        validation_errors = self._is_update_data_valid(body)
+        if validation_errors:
             return self.response(
                 success=False,
                 message="Invalid request data",
+                data={"errors": validation_errors},
                 status=HttpStatus.BAD_REQUEST,
             )
 
@@ -227,7 +231,7 @@ class BacktestController(BaseController):
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
-    def _is_post_data_valid(self, body: Dict[str, Any]) -> bool:
+    def _is_post_data_valid(self, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
                 "asset": {
@@ -253,9 +257,13 @@ class BacktestController(BaseController):
             }  # type: ignore
         )
 
-        return validator.validate(body)  # type: ignore
+        is_valid = validator.validate(body)  # type: ignore
+        if not is_valid:
+            return validator.errors  # type: ignore
 
-    def _is_update_data_valid(self, body: Dict[str, Any]) -> bool:
+        return None
+
+    def _is_update_data_valid(self, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
                 "status": {  # type: ignore
@@ -267,4 +275,8 @@ class BacktestController(BaseController):
             allow_unknown=True,
         )
 
-        return validator.validate(body)  # type: ignore
+        is_valid = validator.validate(body)  # type: ignore
+        if not is_valid:
+            return validator.errors  # type: ignore
+
+        return None

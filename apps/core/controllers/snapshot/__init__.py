@@ -1,6 +1,6 @@
 import logging
 from datetime import UTC, datetime
-from typing import Any, ClassVar, Dict, List, Type
+from typing import Any, ClassVar, Dict, List, Optional, Type
 
 from bson import ObjectId
 from cerberus import Validator
@@ -47,10 +47,12 @@ class SnapshotController(BaseController):
         data = getattr(request, "data", {})
         body = data if isinstance(data, dict) else {}
 
-        if not self._is_post_data_valid(body):
+        validation_errors = self._is_post_data_valid(body)
+        if validation_errors:
             return self.response(
                 success=False,
                 message="Invalid request data",
+                data={"errors": validation_errors},
                 status=HttpStatus.BAD_REQUEST,
             )
 
@@ -135,7 +137,7 @@ class SnapshotController(BaseController):
     # ───────────────────────────────────────────────────────────
     # PRIVATE METHODS
     # ───────────────────────────────────────────────────────────
-    def _is_post_data_valid(self, body: Dict[str, Any]) -> bool:
+    def _is_post_data_valid(self, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
                 "backtest_id": {
@@ -224,7 +226,6 @@ class SnapshotController(BaseController):
                     "required": False,
                     "nullable": True,
                     "coerce": float,
-                    "min": 0,
                 },
                 "sharpe_ratio": {
                     "type": "float",
@@ -254,4 +255,9 @@ class SnapshotController(BaseController):
             }  # type: ignore
         )
 
-        return validator.validate(body)  # type: ignore
+        is_valid = validator.validate(body)  # type: ignore
+
+        if not is_valid:
+            return validator.errors  # type: ignore
+
+        return None

@@ -142,7 +142,8 @@ class SnapshotController(BaseController):
             {
                 "backtest_id": {
                     "type": "string",
-                    "required": True,
+                    "required": False,
+                    "nullable": True,
                     "minlength": 1,
                 },
                 "backtest": {
@@ -259,5 +260,12 @@ class SnapshotController(BaseController):
 
         if not is_valid:
             return validator.errors  # type: ignore
+
+        if body.get("backtest") is True:
+            backtest_id = body.get("backtest_id")
+            if not backtest_id or backtest_id is None:
+                return {
+                    "backtest_id": ["Field is required when backtest is true"]
+                }
 
         return None

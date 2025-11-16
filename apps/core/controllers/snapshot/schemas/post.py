@@ -13,7 +13,7 @@ def post_schema() -> Any:
             name="SnapshotRequest",
             fields={
                 "backtest": serializers.BooleanField(),
-                "backtest_id": serializers.CharField(),
+                "backtest_id": serializers.CharField(required=False, allow_null=True),
                 "strategy_id": serializers.CharField(),
                 "event": serializers.CharField(required=False),
                 "nav": serializers.FloatField(required=False),

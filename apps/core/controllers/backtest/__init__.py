@@ -49,8 +49,8 @@ class BacktestController(BaseController):
         logger = logging.getLogger("django")
         data = getattr(request, "data", {})
         body = data if isinstance(data, dict) else {}
-
         validation_errors = self._is_post_data_valid(body)
+
         if validation_errors:
             return self.response(
                 success=False,

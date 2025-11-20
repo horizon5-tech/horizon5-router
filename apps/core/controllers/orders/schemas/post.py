@@ -12,8 +12,14 @@ def post_schema() -> Any:
         "request": inline_serializer(
             name="OrderRequest",
             fields={
+                "id": serializers.CharField(required=False, allow_null=True),
+                "gateway_order_id": serializers.CharField(
+                    required=False, allow_null=True
+                ),
                 "backtest": serializers.BooleanField(),
                 "backtest_id": serializers.CharField(required=False, allow_null=True),
+                "portfolio_id": serializers.CharField(required=False, allow_null=True),
+                "asset_id": serializers.CharField(required=False, allow_null=True),
                 "strategy_id": serializers.CharField(),
                 "symbol": serializers.CharField(),
                 "gateway": serializers.CharField(),
@@ -30,6 +36,10 @@ def post_schema() -> Any:
                 "stop_loss_price": serializers.FloatField(
                     required=False, allow_null=True
                 ),
+                "commission": serializers.FloatField(required=False, allow_null=True),
+                "commission_percentage": serializers.FloatField(
+                    required=False, allow_null=True
+                ),
                 "client_order_id": serializers.CharField(
                     required=False, allow_null=True
                 ),
@@ -37,6 +47,15 @@ def post_schema() -> Any:
                 "profit": serializers.FloatField(required=False, allow_null=True),
                 "profit_percentage": serializers.FloatField(
                     required=False, allow_null=True
+                ),
+                "trades": serializers.ListField(
+                    required=False, allow_null=True, default=[]
+                ),
+                "logs": serializers.ListField(
+                    required=False, allow_null=True, default=[]
+                ),
+                "variables": serializers.DictField(
+                    required=False, allow_null=True, default={}
                 ),
                 "created_at": serializers.IntegerField(),
                 "updated_at": serializers.IntegerField(),

@@ -129,8 +129,23 @@ class OrderController(BaseController):
 
         to_update = {}
 
+        if "id" in body and body.get("id") is not None:
+            to_update["id"] = body.get("id")
+
+        if "gateway_order_id" in body and body.get("gateway_order_id") is not None:
+            to_update["gateway_order_id"] = body.get("gateway_order_id")
+
         if "backtest" in body:
             to_update["backtest"] = body.get("backtest")
+
+        if "backtest_id" in body and body.get("backtest_id") is not None:
+            to_update["backtest_id"] = body.get("backtest_id")
+
+        if "portfolio_id" in body and body.get("portfolio_id") is not None:
+            to_update["portfolio_id"] = body.get("portfolio_id")
+
+        if "asset_id" in body and body.get("asset_id") is not None:
+            to_update["asset_id"] = body.get("asset_id")
 
         if "strategy_id" in body:
             to_update["strategy_id"] = body.get("strategy_id")
@@ -165,24 +180,6 @@ class OrderController(BaseController):
             if price is not None:
                 to_update["price"] = float(price)
 
-        if "filled" in body:
-            to_update["filled"] = body.get("filled")
-
-        if "created_at" in body:
-            created_at = body.get("created_at")
-            created_at = float(created_at if created_at is not None else 0)
-            created_at = datetime.fromtimestamp(created_at, tz=UTC)
-            to_update["created_at"] = created_at
-
-        if "updated_at" in body:
-            updated_at = body.get("updated_at")
-            updated_at = float(updated_at if updated_at is not None else 0)
-            updated_at = datetime.fromtimestamp(updated_at, tz=UTC)
-            to_update["updated_at"] = updated_at
-
-        if "backtest_id" in body and body.get("backtest_id") is not None:
-            to_update["backtest_id"] = body.get("backtest_id")
-
         if "close_price" in body:
             close_price = body.get("close_price")
             if close_price is not None:
@@ -198,8 +195,21 @@ class OrderController(BaseController):
             if stop_loss_price is not None:
                 to_update["stop_loss_price"] = float(stop_loss_price)
 
+        if "commission" in body:
+            commission = body.get("commission")
+            if commission is not None:
+                to_update["commission"] = float(commission)
+
+        if "commission_percentage" in body:
+            commission_percentage = body.get("commission_percentage")
+            if commission_percentage is not None:
+                to_update["commission_percentage"] = float(commission_percentage)
+
         if "client_order_id" in body and body.get("client_order_id") is not None:
             to_update["client_order_id"] = body.get("client_order_id")
+
+        if "filled" in body:
+            to_update["filled"] = body.get("filled")
 
         if "profit" in body:
             profit = body.get("profit")
@@ -210,6 +220,27 @@ class OrderController(BaseController):
             profit_percentage = body.get("profit_percentage")
             if profit_percentage is not None:
                 to_update["profit_percentage"] = float(profit_percentage)
+
+        if "trades" in body and body.get("trades") is not None:
+            to_update["trades"] = body.get("trades")
+
+        if "logs" in body and body.get("logs") is not None:
+            to_update["logs"] = body.get("logs")
+
+        if "variables" in body and body.get("variables") is not None:
+            to_update["variables"] = body.get("variables")
+
+        if "created_at" in body:
+            created_at = body.get("created_at")
+            created_at = float(created_at if created_at is not None else 0)
+            created_at = datetime.fromtimestamp(created_at, tz=UTC)
+            to_update["created_at"] = created_at
+
+        if "updated_at" in body:
+            updated_at = body.get("updated_at")
+            updated_at = float(updated_at if updated_at is not None else 0)
+            updated_at = datetime.fromtimestamp(updated_at, tz=UTC)
+            to_update["updated_at"] = updated_at
 
         try:
             self._model.update(
@@ -289,11 +320,31 @@ class OrderController(BaseController):
     def _is_post_data_valid(self, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
+                "id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "gateway_order_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
                 "backtest": {
                     "type": "boolean",
                     "required": True,
                 },
                 "backtest_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "portfolio_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "asset_id": {
                     "type": "string",
                     "required": False,
                     "nullable": True,
@@ -361,6 +412,18 @@ class OrderController(BaseController):
                     "nullable": True,
                     "coerce": float,
                 },
+                "commission": {
+                    "type": "float",
+                    "required": False,
+                    "nullable": True,
+                    "coerce": float,
+                },
+                "commission_percentage": {
+                    "type": "float",
+                    "required": False,
+                    "nullable": True,
+                    "coerce": float,
+                },
                 "client_order_id": {
                     "type": "string",
                     "required": False,
@@ -381,6 +444,21 @@ class OrderController(BaseController):
                     "required": False,
                     "nullable": True,
                     "coerce": float,
+                },
+                "trades": {
+                    "type": "list",
+                    "required": False,
+                    "nullable": True,
+                },
+                "logs": {
+                    "type": "list",
+                    "required": False,
+                    "nullable": True,
+                },
+                "variables": {
+                    "type": "dict",
+                    "required": False,
+                    "nullable": True,
                 },
                 "created_at": {
                     "type": "integer",
@@ -404,9 +482,34 @@ class OrderController(BaseController):
     def _is_update_data_valid(self, body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         validator = Validator(
             {
+                "id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "gateway_order_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
                 "backtest": {
                     "type": "boolean",
                     "required": False,
+                },
+                "backtest_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "portfolio_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
+                },
+                "asset_id": {
+                    "type": "string",
+                    "required": False,
+                    "nullable": True,
                 },
                 "strategy_id": {
                     "type": "string",
@@ -456,25 +559,6 @@ class OrderController(BaseController):
                     "nullable": True,
                     "coerce": float,
                 },
-                "filled": {
-                    "type": "boolean",
-                    "required": False,
-                },
-                "created_at": {
-                    "type": "integer",
-                    "required": False,
-                    "coerce": int,
-                },
-                "updated_at": {
-                    "type": "integer",
-                    "required": False,
-                    "coerce": int,
-                },
-                "backtest_id": {
-                    "type": "string",
-                    "required": False,
-                    "nullable": True,
-                },
                 "close_price": {
                     "type": "float",
                     "required": False,
@@ -493,10 +577,26 @@ class OrderController(BaseController):
                     "nullable": True,
                     "coerce": float,
                 },
+                "commission": {
+                    "type": "float",
+                    "required": False,
+                    "nullable": True,
+                    "coerce": float,
+                },
+                "commission_percentage": {
+                    "type": "float",
+                    "required": False,
+                    "nullable": True,
+                    "coerce": float,
+                },
                 "client_order_id": {
                     "type": "string",
                     "required": False,
                     "nullable": True,
+                },
+                "filled": {
+                    "type": "boolean",
+                    "required": False,
                 },
                 "profit": {
                     "type": "float",
@@ -509,6 +609,31 @@ class OrderController(BaseController):
                     "required": False,
                     "nullable": True,
                     "coerce": float,
+                },
+                "trades": {
+                    "type": "list",
+                    "required": False,
+                    "nullable": True,
+                },
+                "logs": {
+                    "type": "list",
+                    "required": False,
+                    "nullable": True,
+                },
+                "variables": {
+                    "type": "dict",
+                    "required": False,
+                    "nullable": True,
+                },
+                "created_at": {
+                    "type": "integer",
+                    "required": False,
+                    "coerce": int,
+                },
+                "updated_at": {
+                    "type": "integer",
+                    "required": False,
+                    "coerce": int,
                 },
             },  # type: ignore
             allow_unknown=True,
